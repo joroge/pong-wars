@@ -1,17 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pong wars | Koen van Gilst</title>
-    <meta
-      name="description"
-      content="The eternal battle between day and night, good and bad. Written in JavaScript with some HTML & CSS in one index.html. Feel free to reuse the code and create your own version."
-    />
-    <link rel="canonical" href="https://pong-wars.koenvangilst.nl/" />
-    <link rel="author" href="https://koenvangilst.nl" />
-    <meta name="theme-color" content="#172B36" />
-    <meta name="creator" content="Koen van Gilst" />
-    <script defer data-domain="pong-wars.koenvangilst.nl" src="https://plausible.koenvangilst.nl/js/script.js"></script>
+    <title>Enhanced Pong Wars - A Randomness Simulation in Vanilla JavaScript</title>
+    <meta name="description" content="An interactive Pong Wars simulation with dynamic color regions and ball physics, built with vanilla JavaScript.">
+    <meta name="keywords" content="pong wars, javascript, simulation, game, physics, randomness">
+    <meta name="author" content="joroge.github.io/pong">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎾</text></svg>">
     <style>
       html {
         height: 100%;
@@ -25,215 +21,1200 @@
         justify-content: center;
         align-items: center;
         background: linear-gradient(to bottom, #172b36 0%, #d9e8e3 100%);
+        font-family: Arial, sans-serif;
       }
 
       #container {
         display: flex;
-        align-items: center;
+        width: 90%;
+        height: 90%;
+        max-width: 1200px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      #game-area {
+        flex: 1;
+        display: flex;
         flex-direction: column;
-        width: min(70vh, 80%);
-        max-width: 600px;
-        height: 100%;
+        background-color: #fff;
+        position: relative;
+      }
+
+      #stats {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 20px;
+        background-color: #f5f5f5;
+        border-bottom: 1px solid #ddd;
+      }
+
+      #percentage {
+        font-weight: bold;
+        color: #172b36;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .percentage-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .color-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+
+      #game-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      #control-btn {
+        background-color: #114C5A;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      #control-btn.paused {
+        background-color: #FF9932;
+      }
+
+      #resume-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: none;
       }
 
       canvas {
         display: block;
-        border-radius: 4px;
-        overflow: hidden;
+        flex: 1;
         width: 100%;
-        margin-top: auto;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        cursor: crosshair;
+        touch-action: none;
       }
 
-      #score {
-        font-family: monospace;
-        margin-top: 30px;
-        font-size: 16px;
-        padding-left: 20px;
+      #placement-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.1);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
         color: #172b36;
+        font-weight: bold;
+        font-size: 18px;
+        pointer-events: none;
+      }
+
+      #placement-instructions {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        text-align: center;
+        max-width: 80%;
+        pointer-events: none;
+      }
+
+      #side-menu {
+        width: 250px;
+        background-color: #f9f9f9;
+        padding: 20px;
+        overflow-y: auto;
+        border-left: 1px solid #ddd;
+      }
+
+      .menu-section {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .menu-section h3 {
+        margin-top: 0;
+        color: #172b36;
+      }
+
+      button {
+        background-color: #114C5A;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px 0;
+        width: 100%;
+      }
+
+      button:hover {
+        background-color: #0d3a45;
+      }
+
+      button.remove {
+        background-color: #d9534f;
+      }
+
+      button.remove:hover {
+        background-color: #c9302c;
+      }
+
+      .ball-item, .color-item {
+        display: flex;
+        align-items: center;
+        margin: 8px 0;
+        padding: 8px;
+        background-color: #fff;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      .ball-preview {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-right: 10px;
+      }
+
+      .ball-info {
+        flex: 1;
+      }
+
+      .ball-bounces {
+        font-size: 12px;
+        color: #666;
+      }
+
+      .color-preview {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 10px;
+        border: 1px solid #ddd;
+      }
+
+      .color-name {
+        flex: 1;
+      }
+
+      input[type="color"] {
+        width: 100%;
+        margin: 5px 0;
+        height: 30px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      select {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      #ball-creation {
+        background-color: #fff;
+        padding: 10px;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      .form-group {
+        margin-bottom: 10px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
       }
 
       #made {
         text-align: center;
         line-height: 1.5;
         font-family: monospace;
-        margin-top: auto;
-        margin-bottom: 20px;
+        margin-top: 20px;
         font-size: 10px;
+        color: #172b36;
       }
 
       #made a {
         color: #172b36;
+      }
+
+      .region-preview {
+        display: flex;
+        gap: 5px;
+        margin: 5px 0;
+      }
+
+      .region-option {
+        flex: 1;
+        text-align: center;
+        padding: 5px;
+        border: 2px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .region-option.selected {
+        border-color: #114C5A;
+      }
+
+      .new-region-indicator {
+        color: #FF9932;
+        font-weight: bold;
+      }
+
+      .dragging {
+        cursor: grabbing !important;
+      }
+
+      .region-dragging {
+        cursor: move !important;
+      }
+
+      .grid-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      .grid-line {
+        stroke: rgba(0, 0, 0, 0.1);
+        stroke-width: 1;
+      }
+
+      #footer-text {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 12px;
+        color: #666;
+        font-style: italic;
       }
     </style>
   </head>
 
   <body>
     <div id="container">
-      <canvas id="pongCanvas" width="600" height="600"></canvas>
-      <div id="score"></div>
-      <p id="made">
-        made by
-        <a href="https://koenvangilst.nl/labs/pong-wars">Koen van Gilst</a> | source on
-        <a href="https://github.com/vnglst/pong-wars">github</a>
-      </p>
+      <div id="game-area">
+        <div id="stats">
+          <div id="percentage">Day: 50% | Night: 50%</div>
+          <div id="game-controls">
+            <button id="control-btn">Pause</button>
+            <button id="resume-btn">Resume Game</button>
+            <div id="iteration">Iteration: 0</div>
+          </div>
+        </div>
+        <canvas id="pongCanvas" width="600" height="600"></canvas>
+        <svg class="grid-overlay" id="gridOverlay" width="600" height="600"></svg>
+        <div id="placement-overlay">
+          <div id="placement-instructions">
+            <h3>Place Your New Ball and Region</h3>
+            <p>Drag the ball to position it</p>
+            <p>Drag the colored square to position the new region</p>
+            <p>Click "Resume Game" when ready</p>
+          </div>
+        </div>
+      </div>
+      <div id="side-menu">
+        <div class="menu-section">
+          <h3>Add Ball</h3>
+          <div id="ball-creation">
+            <div class="form-group">
+              <label>Ball Color:</label>
+              <input type="color" id="newBallColor" value="#114C5A">
+            </div>
+            
+            <div class="form-group">
+              <label>Region Color:</label>
+              <select id="regionColorSelect">
+                <option value="#D9E8E3">Day</option>
+                <option value="#114C5A">Night</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Region Type:</label>
+              <div class="region-preview">
+                <div class="region-option selected" data-type="existing" data-region="day">
+                  <div>Join Day</div>
+                  <div style="background-color: #D9E8E3; height: 10px; border-radius: 2px;"></div>
+                </div>
+                <div class="region-option" data-type="existing" data-region="night">
+                  <div>Join Night</div>
+                  <div style="background-color: #114C5A; height: 10px; border-radius: 2px;"></div>
+                </div>
+                <div class="region-option" data-type="new">
+                  <div class="new-region-indicator">New Region</div>
+                  <div style="background: linear-gradient(90deg, #D9E8E3 50%, #114C5A 50%); height: 10px; border-radius: 2px;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group" id="new-region-color-group" style="display: none;">
+              <label>New Region Color:</label>
+              <input type="color" id="newRegionColor" value="#FF9932">
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="autoPlacement"> Auto-place (no pause)
+              </label>
+            </div>
+            
+            <button id="addBallBtn">Add New Ball</button>
+          </div>
+        </div>
+        
+        <div class="menu-section">
+          <h3>Active Balls</h3>
+          <div id="ballsList"></div>
+        </div>
+        
+        <div class="menu-section">
+          <h3>Colors</h3>
+          <div id="colorsList"></div>
+          <button id="addColorBtn">Add New Color</button>
+        </div>
+        
+        <div id="made">
+          Based on <a href="https://pong-wars.koenvangilst.nl/">Pong Wars by Koen van Gilst</a>
+        </div>
+        
+        <div id="footer-text">
+          This is a randomness simulation in vanilla JavaScript
+        </div>
+      </div>
     </div>
-  </body>
 
-  <script>
-    // Source palette: https://twitter.com/AlexCristache/status/1738610343499157872
-    // Idea for Pong wars: https://twitter.com/nicolasdnl/status/1749715070928433161
+    <script>
+      // Source palette: https://twitter.com/AlexCristache/status/1738610343499157872
+      // Idea for Pong Wars: https://twitter.com/nicolasdnl/status/1749715070928433161
 
-    const colorPalette = {
-      ArcticPowder: "#F1F6F4",
-      MysticMint: "#D9E8E3",
-      Forsythia: "#FFC801",
-      DeepSaffron: "#FF9932",
-      NocturnalExpedition: "#114C5A",
-      OceanicNoir: "#172B36",
-    };
+      const colorPalette = {
+        ArcticPowder: "#F1F6F4",
+        MysticMint: "#D9E8E3",
+        Forsythia: "#FFC801",
+        DeepSaffron: "#FF9932",
+        NocturnalExpedition: "#114C5A",
+        OceanicNoir: "#172B36",
+      };
 
-    const canvas = document.getElementById("pongCanvas");
-    const ctx = canvas.getContext("2d");
-    const scoreElement = document.getElementById("score");
+      const canvas = document.getElementById("pongCanvas");
+      const ctx = canvas.getContext("2d");
+      const gridOverlay = document.getElementById("gridOverlay");
+      const percentageElement = document.getElementById("percentage");
+      const iterationElement = document.getElementById("iteration");
+      const ballsListElement = document.getElementById("ballsList");
+      const colorsListElement = document.getElementById("colorsList");
+      const addBallBtn = document.getElementById("addBallBtn");
+      const addColorBtn = document.getElementById("addColorBtn");
+      const newBallColorInput = document.getElementById("newBallColor");
+      const newRegionColorInput = document.getElementById("newRegionColor");
+      const newRegionColorGroup = document.getElementById("new-region-color-group");
+      const regionColorSelect = document.getElementById("regionColorSelect");
+      const controlBtn = document.getElementById("control-btn");
+      const resumeBtn = document.getElementById("resume-btn");
+      const placementOverlay = document.getElementById("placement-overlay");
+      const autoPlacementCheckbox = document.getElementById("autoPlacement");
 
-    const DAY_COLOR = colorPalette.MysticMint;
-    const DAY_BALL_COLOR = colorPalette.NocturnalExpedition;
-    const NIGHT_COLOR = colorPalette.NocturnalExpedition;
-    const NIGHT_BALL_COLOR = colorPalette.MysticMint;
-    const SQUARE_SIZE = 25;
-    const MIN_SPEED = 5;
-    const MAX_SPEED = 10;
+      // Default colors
+      const DAY_COLOR = colorPalette.MysticMint;
+      const DAY_BALL_COLOR = colorPalette.NocturnalExpedition;
+      const NIGHT_COLOR = colorPalette.NocturnalExpedition;
+      const NIGHT_BALL_COLOR = colorPalette.MysticMint;
+      
+      const SQUARE_SIZE = 25;
+      const MIN_SPEED = 5;
+      const MAX_SPEED = 10;
+      const NEW_REGION_SIZE = 3; // Size of new region in squares
 
-    const numSquaresX = canvas.width / SQUARE_SIZE;
-    const numSquaresY = canvas.height / SQUARE_SIZE;
+      const numSquaresX = canvas.width / SQUARE_SIZE;
+      const numSquaresY = canvas.height / SQUARE_SIZE;
 
-    let dayScore = 0;
-    let nightScore = 0;
+      let dayScore = 0;
+      let nightScore = 0;
+      let iteration = 0;
+      let gameRunning = true;
+      let placementMode = false;
+      let pendingBall = null;
+      let pendingRegion = null;
+      let selectedRegionType = "existing";
+      let selectedExistingRegion = "day";
+      let isDraggingBall = false;
+      let isDraggingRegion = false;
+      let dragOffsetX = 0;
+      let dragOffsetY = 0;
 
-    const squares = [];
+      const squares = [];
+      const balls = [];
+      const colors = [
+        { name: "Day", value: DAY_COLOR },
+        { name: "Night", value: NIGHT_COLOR }
+      ];
 
-    // Populate the fields, one half day, one half night
-    for (let i = 0; i < numSquaresX; i++) {
-      squares[i] = [];
-      for (let j = 0; j < numSquaresY; j++) {
-        squares[i][j] = i < numSquaresX / 2 ? DAY_COLOR : NIGHT_COLOR;
+      // Color statistics
+      const colorStats = {};
+
+      // Initialize the game
+      function init() {
+        // Populate the fields, one half day, one half night
+        for (let i = 0; i < numSquaresX; i++) {
+          squares[i] = [];
+          for (let j = 0; j < numSquaresY; j++) {
+            squares[i][j] = i < numSquaresX / 2 ? DAY_COLOR : NIGHT_COLOR;
+          }
+        }
+
+        // Initialize color stats
+        updateColorStats();
+
+        // Add initial balls
+        balls.push({
+          id: 1,
+          x: canvas.width / 4,
+          y: canvas.height / 2,
+          dx: 8,
+          dy: -8,
+          reverseColor: DAY_COLOR,
+          ballColor: DAY_BALL_COLOR,
+          bounces: 0
+        });
+        
+        balls.push({
+          id: 2,
+          x: (canvas.width / 4) * 3,
+          y: canvas.height / 2,
+          dx: -8,
+          dy: 8,
+          reverseColor: NIGHT_COLOR,
+          ballColor: NIGHT_BALL_COLOR,
+          bounces: 0
+        });
+
+        // Set up region selection
+        setupRegionSelection();
+        
+        // Update UI
+        updateBallsList();
+        updateColorsList();
+        updatePercentageDisplay();
+        
+        // Draw grid
+        drawGrid();
       }
-    }
 
-    const balls = [
-      {
-        x: canvas.width / 4,
-        y: canvas.height / 2,
-        dx: 8,
-        dy: -8,
-        reverseColor: DAY_COLOR,
-        ballColor: DAY_BALL_COLOR,
-      },
-      {
-        x: (canvas.width / 4) * 3,
-        y: canvas.height / 2,
-        dx: -8,
-        dy: 8,
-        reverseColor: NIGHT_COLOR,
-        ballColor: NIGHT_BALL_COLOR,
-      },
-    ];
-
-    let iteration = 0;
-
-    function drawBall(ball) {
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, SQUARE_SIZE / 2, 0, Math.PI * 2, false);
-      ctx.fillStyle = ball.ballColor;
-      ctx.fill();
-      ctx.closePath();
-    }
-
-    function drawSquares() {
-      dayScore = 0;
-      nightScore = 0;
-
-      for (let i = 0; i < numSquaresX; i++) {
-        for (let j = 0; j < numSquaresY; j++) {
-          ctx.fillStyle = squares[i][j];
-          ctx.fillRect(i * SQUARE_SIZE, j * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
-
-          // Update scores
-          if (squares[i][j] === DAY_COLOR) dayScore++;
-          if (squares[i][j] === NIGHT_COLOR) nightScore++;
+      function drawGrid() {
+        // Clear previous grid
+        gridOverlay.innerHTML = '';
+        
+        // Draw vertical lines
+        for (let x = 0; x <= canvas.width; x += SQUARE_SIZE) {
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("class", "grid-line");
+          line.setAttribute("x1", x);
+          line.setAttribute("y1", 0);
+          line.setAttribute("x2", x);
+          line.setAttribute("y2", canvas.height);
+          gridOverlay.appendChild(line);
+        }
+        
+        // Draw horizontal lines
+        for (let y = 0; y <= canvas.height; y += SQUARE_SIZE) {
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("class", "grid-line");
+          line.setAttribute("x1", 0);
+          line.setAttribute("y1", y);
+          line.setAttribute("x2", canvas.width);
+          line.setAttribute("y2", y);
+          gridOverlay.appendChild(line);
         }
       }
-    }
 
-    function checkSquareCollision(ball) {
-      // Check multiple points around the ball's circumference
-      for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
-        const checkX = ball.x + Math.cos(angle) * (SQUARE_SIZE / 2);
-        const checkY = ball.y + Math.sin(angle) * (SQUARE_SIZE / 2);
-
-        const i = Math.floor(checkX / SQUARE_SIZE);
-        const j = Math.floor(checkY / SQUARE_SIZE);
-
-        if (i >= 0 && i < numSquaresX && j >= 0 && j < numSquaresY) {
-          if (squares[i][j] !== ball.reverseColor) {
-            // Square hit! Update square color
-            squares[i][j] = ball.reverseColor;
-
-            // Determine bounce direction based on the angle
-            if (Math.abs(Math.cos(angle)) > Math.abs(Math.sin(angle))) {
-              ball.dx = -ball.dx;
+      function setupRegionSelection() {
+        const regionOptions = document.querySelectorAll('.region-option');
+        regionOptions.forEach(option => {
+          option.addEventListener('click', function() {
+            // Remove selected class from all options
+            regionOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Add selected class to clicked option
+            this.classList.add('selected');
+            
+            // Update selection variables
+            selectedRegionType = this.getAttribute('data-type');
+            if (selectedRegionType === 'existing') {
+              selectedExistingRegion = this.getAttribute('data-region');
+              newRegionColorGroup.style.display = 'none';
+              document.querySelector('.form-group:nth-child(2)').style.display = 'block';
             } else {
-              ball.dy = -ball.dy;
+              newRegionColorGroup.style.display = 'block';
+              document.querySelector('.form-group:nth-child(2)').style.display = 'none';
+            }
+          });
+        });
+      }
+
+      function drawBall(ball) {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, SQUARE_SIZE / 2, 0, Math.PI * 2, false);
+        ctx.fillStyle = ball.ballColor;
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      function drawSquares() {
+        // Reset scores
+        for (const color in colorStats) {
+          colorStats[color] = 0;
+        }
+
+        for (let i = 0; i < numSquaresX; i++) {
+          for (let j = 0; j < numSquaresY; j++) {
+            ctx.fillStyle = squares[i][j];
+            ctx.fillRect(i * SQUARE_SIZE, j * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
+
+            // Update color statistics
+            const color = squares[i][j];
+            colorStats[color] = (colorStats[color] || 0) + 1;
+          }
+        }
+        
+        // Update percentage display
+        updatePercentageDisplay();
+      }
+
+      function updateColorStats() {
+        // Initialize all known colors
+        colors.forEach(colorObj => {
+          colorStats[colorObj.value] = 0;
+        });
+        
+        // Count squares for each color
+        for (let i = 0; i < numSquaresX; i++) {
+          for (let j = 0; j < numSquaresY; j++) {
+            const color = squares[i][j];
+            colorStats[color] = (colorStats[color] || 0) + 1;
+          }
+        }
+      }
+
+      function updatePercentageDisplay() {
+        const totalSquares = numSquaresX * numSquaresY;
+        let percentageHTML = '';
+        
+        colors.forEach(colorObj => {
+          const count = colorStats[colorObj.value] || 0;
+          const percentage = ((count / totalSquares) * 100).toFixed(1);
+          percentageHTML += `
+            <div class="percentage-item">
+              <div class="color-dot" style="background-color: ${colorObj.value}"></div>
+              <div>${colorObj.name}: ${percentage}%</div>
+            </div>
+          `;
+        });
+        
+        percentageElement.innerHTML = percentageHTML;
+      }
+
+      function checkSquareCollision(ball) {
+        // Check multiple points around the ball's circumference
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+          const checkX = ball.x + Math.cos(angle) * (SQUARE_SIZE / 2);
+          const checkY = ball.y + Math.sin(angle) * (SQUARE_SIZE / 2);
+
+          const i = Math.floor(checkX / SQUARE_SIZE);
+          const j = Math.floor(checkY / SQUARE_SIZE);
+
+          if (i >= 0 && i < numSquaresX && j >= 0 && j < numSquaresY) {
+            if (squares[i][j] !== ball.reverseColor) {
+              // Square hit! Update square color
+              squares[i][j] = ball.reverseColor;
+
+              // Determine bounce direction based on the angle
+              if (Math.abs(Math.cos(angle)) > Math.abs(Math.sin(angle))) {
+                ball.dx = -ball.dx;
+              } else {
+                ball.dy = -ball.dy;
+              }
+              
+              // Increment bounce counter
+              ball.bounces++;
+              updateBallsList();
             }
           }
         }
       }
-    }
 
-    function checkBoundaryCollision(ball) {
-      if (ball.x + ball.dx > canvas.width - SQUARE_SIZE / 2 || ball.x + ball.dx < SQUARE_SIZE / 2) {
-        ball.dx = -ball.dx;
+      function checkBoundaryCollision(ball) {
+        let bounced = false;
+        
+        if (ball.x + ball.dx > canvas.width - SQUARE_SIZE / 2 || ball.x + ball.dx < SQUARE_SIZE / 2) {
+          ball.dx = -ball.dx;
+          bounced = true;
+        }
+        if (ball.y + ball.dy > canvas.height - SQUARE_SIZE / 2 || ball.y + ball.dy < SQUARE_SIZE / 2) {
+          ball.dy = -ball.dy;
+          bounced = true;
+        }
+        
+        if (bounced) {
+          ball.bounces++;
+          updateBallsList();
+        }
       }
-      if (ball.y + ball.dy > canvas.height - SQUARE_SIZE / 2 || ball.y + ball.dy < SQUARE_SIZE / 2) {
-        ball.dy = -ball.dy;
+
+      function addRandomness(ball) {
+        ball.dx += Math.random() * 0.02 - 0.01;
+        ball.dy += Math.random() * 0.02 - 0.01;
+
+        // Limit the speed of the ball
+        ball.dx = Math.min(Math.max(ball.dx, -MAX_SPEED), MAX_SPEED);
+        ball.dy = Math.min(Math.max(ball.dy, -MAX_SPEED), MAX_SPEED);
+
+        // Make sure the ball always maintains a minimum speed
+        if (Math.abs(ball.dx) < MIN_SPEED) ball.dx = ball.dx > 0 ? MIN_SPEED : -MIN_SPEED;
+        if (Math.abs(ball.dy) < MIN_SPEED) ball.dy = ball.dy > 0 ? MIN_SPEED : -MIN_SPEED;
       }
-    }
 
-    function addRandomness(ball) {
-      ball.dx += Math.random() * 0.02 - 0.01;
-      ball.dy += Math.random() * 0.02 - 0.01;
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawSquares();
 
-      // Limit the speed of the ball
-      ball.dx = Math.min(Math.max(ball.dx, -MAX_SPEED), MAX_SPEED);
-      ball.dy = Math.min(Math.max(ball.dy, -MAX_SPEED), MAX_SPEED);
+        balls.forEach((ball) => {
+          drawBall(ball);
+          if (gameRunning && !placementMode) {
+            checkSquareCollision(ball);
+            checkBoundaryCollision(ball);
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+            addRandomness(ball);
+          }
+        });
 
-      // Make sure the ball always maintains a minimum speed
-      if (Math.abs(ball.dx) < MIN_SPEED) ball.dx = ball.dx > 0 ? MIN_SPEED : -MIN_SPEED;
-      if (Math.abs(ball.dy) < MIN_SPEED) ball.dy = ball.dy > 0 ? MIN_SPEED : -MIN_SPEED;
-    }
+        // Draw pending ball and region in placement mode
+        if (placementMode && pendingBall) {
+          drawBall(pendingBall);
+          
+          // Draw the new region preview
+          if (selectedRegionType === 'new' && pendingRegion) {
+            const centerX = pendingRegion.x;
+            const centerY = pendingRegion.y;
+            
+            ctx.fillStyle = pendingBall.reverseColor + '80'; // Semi-transparent
+            ctx.strokeStyle = pendingBall.reverseColor;
+            ctx.lineWidth = 2;
+            
+            const startX = Math.max(0, centerX - Math.floor(NEW_REGION_SIZE / 2)) * SQUARE_SIZE;
+            const startY = Math.max(0, centerY - Math.floor(NEW_REGION_SIZE / 2)) * SQUARE_SIZE;
+            const width = Math.min(NEW_REGION_SIZE, numSquaresX - Math.floor(startX / SQUARE_SIZE)) * SQUARE_SIZE;
+            const height = Math.min(NEW_REGION_SIZE, numSquaresY - Math.floor(startY / SQUARE_SIZE)) * SQUARE_SIZE;
+            
+            ctx.fillRect(startX, startY, width, height);
+            ctx.strokeRect(startX, startY, width, height);
+          }
+        }
 
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawSquares();
+        if (gameRunning && !placementMode) {
+          iteration++;
+          iterationElement.textContent = `Iteration: ${iteration}`;
+        }
+      }
 
-      scoreElement.textContent = `day ${dayScore} | night ${nightScore}`;
+      function createNewRegion(centerX, centerY, color) {
+        const centerGridX = centerX;
+        const centerGridY = centerY;
+        
+        const startX = Math.max(0, centerGridX - Math.floor(NEW_REGION_SIZE / 2));
+        const startY = Math.max(0, centerGridY - Math.floor(NEW_REGION_SIZE / 2));
+        const endX = Math.min(numSquaresX, startX + NEW_REGION_SIZE);
+        const endY = Math.min(numSquaresY, startY + NEW_REGION_SIZE);
+        
+        // Create the new region
+        for (let i = startX; i < endX; i++) {
+          for (let j = startY; j < endY; j++) {
+            squares[i][j] = color;
+          }
+        }
+        
+        // Update color stats
+        updateColorStats();
+        updatePercentageDisplay();
+      }
 
-      balls.forEach((ball) => {
-        drawBall(ball);
-        checkSquareCollision(ball);
-        checkBoundaryCollision(ball);
-        ball.x += ball.dx;
-        ball.y += ball.dy;
+      function startPlacementMode(ballConfig) {
+        placementMode = true;
+        gameRunning = false;
+        controlBtn.style.display = "none";
+        resumeBtn.style.display = "block";
+        placementOverlay.style.display = "flex";
+        
+        pendingBall = {
+          ...ballConfig,
+          x: canvas.width / 2,
+          y: canvas.height / 2
+        };
+        
+        // For new regions, create a separate region object
+        if (selectedRegionType === 'new') {
+          pendingRegion = {
+            x: Math.floor(pendingBall.x / SQUARE_SIZE),
+            y: Math.floor(pendingBall.y / SQUARE_SIZE)
+          };
+        }
+        
+        // Set up mouse and touch event handlers for dragging
+        setupDragHandlers();
+      }
 
-        addRandomness(ball);
-      });
+      function setupDragHandlers() {
+        // Mouse events
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseleave', handleMouseUp);
+        
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd);
+        canvas.addEventListener('touchcancel', handleTouchEnd);
+      }
 
-      iteration++;
-      if (iteration % 1_000 === 0) console.log("iteration", iteration);
-    }
+      function removeDragHandlers() {
+        // Remove mouse events
+        canvas.removeEventListener('mousedown', handleMouseDown);
+        canvas.removeEventListener('mousemove', handleMouseMove);
+        canvas.removeEventListener('mouseup', handleMouseUp);
+        canvas.removeEventListener('mouseleave', handleMouseUp);
+        
+        // Remove touch events
+        canvas.removeEventListener('touchstart', handleTouchStart);
+        canvas.removeEventListener('touchmove', handleTouchMove);
+        canvas.removeEventListener('touchend', handleTouchEnd);
+        canvas.removeEventListener('touchcancel', handleTouchEnd);
+      }
 
-    const FRAME_RATE = 100;
-    setInterval(draw, 1000 / FRAME_RATE);
-  </script>
+      function handleMouseDown(event) {
+        if (!placementMode || !pendingBall) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        handleDragStart(x, y);
+      }
+
+      function handleMouseMove(event) {
+        if (!placementMode || !pendingBall) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        handleDragMove(x, y);
+      }
+
+      function handleMouseUp() {
+        handleDragEnd();
+      }
+
+      function handleTouchStart(event) {
+        if (!placementMode || !pendingBall) return;
+        
+        event.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touch = event.touches[0];
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        handleDragStart(x, y);
+      }
+
+      function handleTouchMove(event) {
+        if (!placementMode || !pendingBall) return;
+        
+        event.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touch = event.touches[0];
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        handleDragMove(x, y);
+      }
+
+      function handleTouchEnd() {
+        handleDragEnd();
+      }
+
+      function handleDragStart(x, y) {
+        // Check if touch is on the ball
+        const ballDistance = Math.sqrt((x - pendingBall.x) ** 2 + (y - pendingBall.y) ** 2);
+        if (ballDistance <= SQUARE_SIZE / 2) {
+          isDraggingBall = true;
+          dragOffsetX = x - pendingBall.x;
+          dragOffsetY = y - pendingBall.y;
+          canvas.classList.add('dragging');
+          return;
+        }
+        
+        // Check if touch is on the region (for new regions)
+        if (selectedRegionType === 'new' && pendingRegion) {
+          const regionCenterX = (pendingRegion.x + 0.5) * SQUARE_SIZE;
+          const regionCenterY = (pendingRegion.y + 0.5) * SQUARE_SIZE;
+          const regionSize = NEW_REGION_SIZE * SQUARE_SIZE;
+          
+          if (x >= regionCenterX - regionSize/2 && x <= regionCenterX + regionSize/2 &&
+              y >= regionCenterY - regionSize/2 && y <= regionCenterY + regionSize/2) {
+            isDraggingRegion = true;
+            dragOffsetX = x - regionCenterX;
+            dragOffsetY = y - regionCenterY;
+            canvas.classList.add('region-dragging');
+          }
+        }
+      }
+
+      function handleDragMove(x, y) {
+        // Update ball position
+        if (isDraggingBall) {
+          pendingBall.x = x - dragOffsetX;
+          pendingBall.y = y - dragOffsetY;
+          
+          // Constrain to canvas boundaries
+          pendingBall.x = Math.max(SQUARE_SIZE / 2, Math.min(canvas.width - SQUARE_SIZE / 2, pendingBall.x));
+          pendingBall.y = Math.max(SQUARE_SIZE / 2, Math.min(canvas.height - SQUARE_SIZE / 2, pendingBall.y));
+        }
+        
+        // Update region position
+        if (isDraggingRegion && pendingRegion) {
+          const regionCenterX = x - dragOffsetX;
+          const regionCenterY = y - dragOffsetY;
+          
+          // Convert to grid coordinates
+          const gridX = Math.floor(regionCenterX / SQUARE_SIZE);
+          const gridY = Math.floor(regionCenterY / SQUARE_SIZE);
+          
+          // Constrain to canvas boundaries
+          pendingRegion.x = Math.max(Math.floor(NEW_REGION_SIZE / 2), 
+            Math.min(numSquaresX - Math.ceil(NEW_REGION_SIZE / 2), gridX));
+          pendingRegion.y = Math.max(Math.floor(NEW_REGION_SIZE / 2), 
+            Math.min(numSquaresY - Math.ceil(NEW_REGION_SIZE / 2), gridY));
+        }
+      }
+
+      function handleDragEnd() {
+        isDraggingBall = false;
+        isDraggingRegion = false;
+        canvas.classList.remove('dragging');
+        canvas.classList.remove('region-dragging');
+      }
+
+      function exitPlacementMode() {
+        placementMode = false;
+        
+        // If we have a pending ball, add it to the game
+        if (pendingBall) {
+          // If creating a new region, create it
+          if (selectedRegionType === 'new' && pendingRegion) {
+            createNewRegion(pendingRegion.x, pendingRegion.y, pendingBall.reverseColor);
+          }
+          
+          balls.push(pendingBall);
+          updateBallsList();
+          pendingBall = null;
+          pendingRegion = null;
+        }
+        
+        // Clean up event handlers
+        removeDragHandlers();
+        
+        // Update UI
+        placementOverlay.style.display = "none";
+        controlBtn.style.display = "block";
+        resumeBtn.style.display = "none";
+      }
+
+      function resumeGame() {
+        exitPlacementMode();
+        gameRunning = true;
+        controlBtn.textContent = "Pause";
+        controlBtn.classList.remove("paused");
+      }
+
+      function toggleGameState() {
+        if (placementMode) return;
+        
+        gameRunning = !gameRunning;
+        
+        if (gameRunning) {
+          controlBtn.textContent = "Pause";
+          controlBtn.classList.remove("paused");
+        } else {
+          controlBtn.textContent = "Play";
+          controlBtn.classList.add("paused");
+        }
+      }
+
+      // UI Functions
+      function updateBallsList() {
+        ballsListElement.innerHTML = '';
+        
+        balls.forEach(ball => {
+          const ballItem = document.createElement('div');
+          ballItem.className = 'ball-item';
+          
+          ballItem.innerHTML = `
+            <div class="ball-preview" style="background-color: ${ball.ballColor}"></div>
+            <div class="ball-info">
+              <div>Ball ${ball.id}</div>
+              <div class="ball-bounces">Bounces: ${ball.bounces}</div>
+            </div>
+            <button class="remove" data-ball-id="${ball.id}">Remove</button>
+          `;
+          
+          ballsListElement.appendChild(ballItem);
+        });
+        
+        // Add event listeners to remove buttons
+        ballsListElement.querySelectorAll('button.remove').forEach(button => {
+          button.addEventListener('click', function() {
+            const ballId = parseInt(this.getAttribute('data-ball-id'));
+            removeBall(ballId);
+          });
+        });
+      }
+      
+      function updateColorsList() {
+        colorsListElement.innerHTML = '';
+        
+        colors.forEach((color, index) => {
+          const colorItem = document.createElement('div');
+          colorItem.className = 'color-item';
+          
+          colorItem.innerHTML = `
+            <div class="color-preview" style="background-color: ${color.value}"></div>
+            <div class="color-name">${color.name}</div>
+            <input type="color" value="${color.value}" data-color-index="${index}">
+            <button class="remove" data-color-index="${index}">Remove</button>
+          `;
+          
+          colorsListElement.appendChild(colorItem);
+        });
+        
+        // Update the region color dropdown
+        updateRegionColorDropdown();
+        
+        // Add event listeners to color inputs and remove buttons
+        colorsListElement.querySelectorAll('input[type="color"]').forEach(input => {
+          input.addEventListener('change', function() {
+            const index = parseInt(this.getAttribute('data-color-index'));
+            updateColor(index, this.value);
+          });
+        });
+        
+        colorsListElement.querySelectorAll('button.remove').forEach(button => {
+          button.addEventListener('click', function() {
+            const index = parseInt(this.getAttribute('data-color-index'));
+            removeColor(index);
+          });
+        });
+      }
+      
+      function updateRegionColorDropdown() {
+        // Clear existing options
+        regionColorSelect.innerHTML = '';
+        
+        // Add all available colors to the dropdown
+        colors.forEach(color => {
+          const option = document.createElement('option');
+          option.value = color.value;
+          option.textContent = color.name;
+          regionColorSelect.appendChild(option);
+        });
+      }
+      
+      // Ball Management
+      function addBall() {
+        const ballColor = newBallColorInput.value;
+        const autoPlacement = autoPlacementCheckbox.checked;
+        
+        // Determine reverse color based on selection
+        let reverseColor;
+        if (selectedRegionType === 'existing') {
+          reverseColor = regionColorSelect.value;
+        } else {
+          reverseColor = newRegionColorInput.value; // Use the selected region color
+        }
+        
+        const newBall = {
+          id: balls.length > 0 ? Math.max(...balls.map(b => b.id)) + 1 : 1,
+          dx: (Math.random() - 0.5) * 10,
+          dy: (Math.random() - 0.5) * 10,
+          reverseColor: reverseColor,
+          ballColor: ballColor,
+          bounces: 0
+        };
+        
+        // Ensure minimum speed
+        if (Math.abs(newBall.dx) < MIN_SPEED) newBall.dx = newBall.dx > 0 ? MIN_SPEED : -MIN_SPEED;
+        if (Math.abs(newBall.dy) < MIN_SPEED) newBall.dy = newBall.dy > 0 ? MIN_SPEED : -MIN_SPEED;
+        
+        if (autoPlacement) {
+          // Auto-place the ball
+          if (selectedRegionType === 'existing') {
+            // Place in the selected region
+            if (selectedExistingRegion === 'day') {
+              newBall.x = Math.random() * (canvas.width / 2 - SQUARE_SIZE) + SQUARE_SIZE / 2;
+            } else {
+              newBall.x = Math.random() * (canvas.width / 2 - SQUARE_SIZE) + canvas.width / 2 + SQUARE_SIZE / 2;
+            }
+            newBall.y = Math.random() * (canvas.height - SQUARE_SIZE) + SQUARE_SIZE / 2;
+          } else {
+            // Place randomly for new region
+            newBall.x = Math.random() * (canvas.width - SQUARE_SIZE) + SQUARE_SIZE / 2;
+            newBall.y = Math.random() * (canvas.height - SQUARE_SIZE) + SQUARE_SIZE / 2;
+            // Create the new region
+            const centerX = Math.floor(newBall.x / SQUARE_SIZE);
+            const centerY = Math.floor(newBall.y / SQUARE_SIZE);
+            createNewRegion(centerX, centerY, reverseColor);
+          }
+          
+          balls.push(newBall);
+          updateBallsList();
+        } else {
+          // Enter placement mode
+          startPlacementMode(newBall);
+        }
+      }
+      
+      function removeBall(id) {
+        const index = balls.findIndex(ball => ball.id === id);
+        if (index !== -1) {
+          balls.splice(index, 1);
+          updateBallsList();
+        }
+      }
+      
+      // Color Management
+      function addColor() {
+        const newColor = {
+          name: `Color ${colors.length + 1}`,
+          value: '#' + Math.floor(Math.random()*16777215).toString(16)
+        };
+        
+        colors.push(newColor);
+        updateColorsList();
+        updateColorStats();
+        updatePercentageDisplay();
+      }
+      
+      function updateColor(index, newValue) {
+        if (index >= 0 && index < colors.length) {
+          const oldValue = colors[index].value;
+          colors[index].value = newValue;
+          
+          // Update color stats
+          colorStats[newValue] = colorStats[oldValue] || 0;
+          delete colorStats[oldValue];
+          
+          // Update balls that use this color
+          balls.forEach(ball => {
+            if (ball.ballColor === oldValue) {
+              ball.ballColor = newValue;
+            }
+            if (ball.reverseColor === oldValue) {
+              ball.reverseColor = newValue;
+            }
+          });
+          
+          // Update squares that use this color
+          for (let i = 0; i < numSquaresX; i++) {
+            for (let j = 0; j < numSquaresY; j++) {
+              if (squares[i][j] === oldValue) {
+                squares[i][j] = newValue;
+              }
+            }
+          }
+          
+          updateBallsList();
+          updatePercentageDisplay();
+        }
+      }
+      
+      function removeColor(index) {
+        if (index >= 0 && index < colors.length && colors.length > 2) {
+          // Check if color is being used
+          const colorValue = colors[index].value;
+          let isUsed = false;
+          
+          // Check balls
+          for (const ball of balls) {
+            if (ball.ballColor === colorValue || ball.reverseColor === colorValue) {
+              isUsed = true;
+              break;
+            }
+          }
+          
+          // Check squares
+          if (!isUsed) {
+            for (let i = 0; i < numSquaresX && !isUsed; i++) {
+              for (let j = 0; j < numSquaresY && !isUsed; j++) {
+                if (squares[i][j] === colorValue) {
+                  isUsed = true;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (isUsed) {
+            alert("Cannot remove color that is currently in use!");
+            return;
+          }
+          
+          colors.splice(index, 1);
+          delete colorStats[colorValue];
+          updateColorsList();
+          updatePercentageDisplay();
+        } else {
+          alert("You need at least 2 colors!");
+        }
+      }
+      
+      // Event Listeners
+      addBallBtn.addEventListener('click', addBall);
+      addColorBtn.addEventListener('click', addColor);
+      controlBtn.addEventListener('click', toggleGameState);
+      resumeBtn.addEventListener('click', resumeGame);
+      
+      // Initialize and start the game
+      init();
+      const FRAME_RATE = 100;
+      setInterval(draw, 1000 / FRAME_RATE);
+    </script>
+  </body>
 </html>
