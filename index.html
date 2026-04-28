@@ -1,1220 +1,1245 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Enhanced Pong Wars - A Randomness Simulation in Vanilla JavaScript</title>
-    <meta name="description" content="An interactive Pong Wars simulation with dynamic color regions and ball physics, built with vanilla JavaScript.">
-    <meta name="keywords" content="pong wars, javascript, simulation, game, physics, randomness">
-    <meta name="author" content="joroge.github.io/pong">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎾</text></svg>">
-    <style>
-      html {
-        height: 100%;
-      }
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>PONG WARS — Chaos Simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d1b2a;
+  --panel: #0f2233;
+  --border: #1e3a52;
+  --accent: #FFC801;
+  --accent2: #FF9932;
+  --text: #d9e8e3;
+  --text-dim: #6a9db5;
+  --radius: 6px;
+  --trans: 0.25s ease;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;font-family:'Share Tech Mono',monospace;background:var(--bg);color:var(--text);}
 
-      body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: linear-gradient(to bottom, #172b36 0%, #d9e8e3 100%);
-        font-family: Arial, sans-serif;
-      }
+/* ── INTRO ── */
+#intro{position:fixed;inset:0;background:#050d14;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s;}
+#intro.gone{opacity:0;pointer-events:none;}
+#intro h1{font-family:'Orbitron',monospace;font-size:clamp(28px,6vw,52px);font-weight:900;color:var(--accent);letter-spacing:4px;text-shadow:0 0 60px rgba(255,200,1,.5);margin-bottom:6px;}
+#intro .sub{color:var(--text-dim);font-size:12px;letter-spacing:3px;margin-bottom:36px;}
+#intro .dots{display:flex;gap:6px;margin-bottom:30px;}
+#intro .dot{width:10px;height:10px;border-radius:50%;animation:blink 1.2s ease-in-out infinite;}
+#intro .dot:nth-child(2){animation-delay:.2s;}
+#intro .dot:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+.start-btn{background:var(--accent);color:#050d14;border:none;padding:14px 44px;border-radius:40px;font-family:'Orbitron',monospace;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:2px;transition:all .3s;box-shadow:0 0 0 rgba(255,200,1,0);}
+.start-btn:hover{background:var(--accent2);transform:scale(1.05);box-shadow:0 0 30px rgba(255,200,1,.4);}
 
-      #container {
-        display: flex;
-        width: 90%;
-        height: 90%;
-        max-width: 1200px;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
-        overflow: hidden;
-      }
+/* ── APP ── */
+#app{display:flex;flex-direction:column;height:100vh;}
 
-      #game-area {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        background-color: #fff;
-        position: relative;
-      }
+/* ── TOPBAR ── */
+#topbar{display:flex;align-items:center;gap:12px;padding:0 14px;height:48px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;}
+.logo{font-family:'Orbitron',monospace;font-weight:900;font-size:15px;color:var(--accent);letter-spacing:2px;white-space:nowrap;flex-shrink:0;}
+#score-bar-outer{flex:1;min-width:60px;max-width:200px;height:6px;border-radius:3px;background:var(--border);overflow:hidden;display:flex;}
+#sbar-a,#sbar-b{height:100%;transition:width .4s ease;}
+#score-items{display:flex;gap:14px;align-items:center;flex-shrink:0;}
+.sc-item{display:flex;align-items:center;gap:6px;font-size:11px;}
+.sc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sc-pct{font-weight:bold;font-size:13px;}
+#tick-ctr{font-size:10px;color:var(--text-dim);white-space:nowrap;flex-shrink:0;}
+#topbar-right{display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:auto;}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.status-dot.run{background:#2ecc71;animation:pgreen 1.5s ease-in-out infinite;}
+.status-dot.pau{background:var(--accent);animation:pamber 1s ease-in-out infinite;}
+@keyframes pgreen{0%,100%{box-shadow:0 0 0 0 rgba(46,204,113,.5);}50%{box-shadow:0 0 0 5px rgba(46,204,113,0);}}
+@keyframes pamber{0%,100%{opacity:1;}50%{opacity:.3;}}
 
-      #stats {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 20px;
-        background-color: #f5f5f5;
-        border-bottom: 1px solid #ddd;
-      }
+/* ── BUTTONS ── */
+.btn{background:transparent;border:1px solid var(--border);color:var(--text);padding:5px 11px;border-radius:var(--radius);cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;transition:all var(--trans);white-space:nowrap;line-height:1.4;}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#050d14;font-weight:bold;}
+.btn.pri:hover{background:var(--accent2);border-color:var(--accent2);}
+.btn.red{border-color:#c0392b;color:#e74c3c;}
+.btn.red:hover{background:#c0392b;color:#fff;}
+.btn.sm{padding:3px 8px;font-size:10px;}
 
-      #percentage {
-        font-weight: bold;
-        color: #172b36;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
+/* ── MAIN GRID ── */
+#main{display:grid;grid-template-columns:210px 1fr 230px;flex:1;overflow:hidden;min-height:0;}
+@media(max-width:960px){#main{grid-template-columns:1fr;}#left-panel,#right-panel{display:none;}}
 
-      .percentage-item {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-      }
+/* ── PANELS ── */
+.panel{background:var(--panel);overflow-y:auto;overflow-x:hidden;padding:12px 10px;}
+#left-panel{border-right:1px solid var(--border);}
+#right-panel{border-left:1px solid var(--border);}
+.p-sec{margin-bottom:18px;}
+.p-sec h4{font-family:'Orbitron',monospace;font-size:9px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+.p-sec h4 .sec-action{float:right;cursor:pointer;color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:0;}
+.p-sec h4 .sec-action:hover{color:var(--accent);}
+.frow{margin-bottom:9px;}
+.frow label{display:block;font-size:10px;color:var(--text-dim);margin-bottom:3px;}
+.sw{display:flex;align-items:center;gap:7px;}
+input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;border:none;}
+.sv{font-size:10px;color:var(--accent);min-width:28px;text-align:right;}
+input[type=color]{width:100%;height:28px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;padding:2px;}
+select{width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;}
+select:focus{border-color:var(--accent);}
 
-      .color-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-      }
+/* toggle */
+.trow{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.trow span{font-size:10px;color:var(--text-dim);}
+.tog{position:relative;width:34px;height:17px;flex-shrink:0;}
+.tog input{display:none;}
+.tog-track{position:absolute;inset:0;background:var(--border);border-radius:9px;cursor:pointer;transition:background var(--trans);}
+.tog input:checked+.tog-track{background:var(--accent);}
+.tog-thumb{position:absolute;top:2px;left:2px;width:13px;height:13px;background:white;border-radius:50%;transition:transform var(--trans);pointer-events:none;}
+.tog input:checked~.tog-thumb{transform:translateX(17px);}
 
-      #game-controls {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-      }
+/* schemes */
+.scheme-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.scheme-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all var(--trans);background:transparent;color:var(--text);font-size:9px;font-family:'Share Tech Mono',monospace;width:100%;}
+.scheme-btn:hover,.scheme-btn.on{border-color:var(--accent);}
+.scheme-btn.on{background:rgba(255,200,1,.08);}
+.sch-prev{display:flex;width:36px;height:16px;border-radius:3px;overflow:hidden;}
+.sch-prev div{flex:1;}
 
-      #control-btn {
-        background-color: #114C5A;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-      }
+/* ball cards */
+.ball-card{display:flex;align-items:center;gap:7px;padding:7px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:5px;transition:border-color var(--trans);}
+.ball-card:hover{border-color:rgba(255,200,1,.3);}
+.ball-ico{width:16px;height:16px;border-radius:50%;flex-shrink:0;}
+.ball-det{flex:1;min-width:0;}
+.ball-det .bn{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ball-det .bs{font-size:9px;color:var(--text-dim);}
+.ball-rm{background:transparent;border:none;color:#555;cursor:pointer;font-size:15px;padding:0 3px;transition:color var(--trans);line-height:1;}
+.ball-rm:hover{color:#e74c3c;}
 
-      #control-btn.paused {
-        background-color: #FF9932;
-      }
+/* canvas area */
+#canvas-area{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 50%,#0d1b2a 0%,#050d14 100%);position:relative;overflow:hidden;}
+#canvas-wrap{position:relative;}
+#pongCanvas{display:block;cursor:crosshair;image-rendering:pixelated;}
+#particleCanvas{position:absolute;top:0;left:0;pointer-events:none;}
+/* scanlines */
+#canvas-wrap::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);pointer-events:none;z-index:5;}
+#fps-tag{position:absolute;top:8px;left:10px;font-size:9px;color:rgba(255,255,255,.25);pointer-events:none;z-index:10;font-family:'Share Tech Mono',monospace;}
+#fs-btn{position:absolute;bottom:10px;right:10px;z-index:10;opacity:.5;transition:opacity var(--trans);}
+#fs-btn:hover{opacity:1;}
 
-      #resume-btn {
-        background-color: #28a745;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        display: none;
-      }
+/* right panel stats */
+.stat-row{display:flex;justify-content:space-between;padding:3px 0;font-size:10px;border-bottom:1px solid rgba(255,255,255,.04);}
+.stat-row .k{color:var(--text-dim);}
+.stat-row .v{color:var(--accent);}
+#histCv{width:100%;border-radius:var(--radius);background:rgba(0,0,0,.3);display:block;}
+.lb-item{display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:4px;font-size:10px;margin-bottom:3px;background:rgba(255,255,255,.03);}
+.lb-rank{color:var(--text-dim);min-width:22px;}
+.lb-team{flex:1;}
+.lb-score{color:var(--accent);font-weight:bold;}
+.kb-row{display:flex;justify-content:space-between;padding:3px 0;font-size:10px;}
+.kb-key{background:var(--border);border-radius:3px;padding:1px 5px;font-size:9px;color:var(--text-dim);}
+.kb-val{color:var(--text-dim);}
 
-      canvas {
-        display: block;
-        flex: 1;
-        width: 100%;
-        cursor: crosshair;
-        touch-action: none;
-      }
+/* mobile bar */
+#mob-bar{display:none;gap:6px;padding:8px 10px;background:var(--panel);border-top:1px solid var(--border);flex-wrap:wrap;justify-content:center;flex-shrink:0;}
+@media(max-width:960px){#mob-bar{display:flex;}}
 
-      #placement-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.1);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        color: #172b36;
-        font-weight: bold;
-        font-size: 18px;
-        pointer-events: none;
-      }
+/* mobile drawer */
+#mob-drawer{position:fixed;bottom:-100%;left:0;right:0;background:var(--panel);border-top:1px solid var(--border);border-radius:12px 12px 0 0;padding:16px;z-index:500;transition:bottom .35s cubic-bezier(.4,0,.2,1);max-height:70vh;overflow-y:auto;}
+#mob-drawer.open{bottom:0;}
+#mob-drawer-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+#mob-drawer-head h3{font-family:'Orbitron',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;}
+#mob-drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:499;display:none;}
+#mob-drawer-overlay.open{display:block;}
 
-      #placement-instructions {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        text-align: center;
-        max-width: 80%;
-        pointer-events: none;
-      }
+/* notification */
+#notif{position:fixed;top:58px;left:50%;transform:translateX(-50%) translateY(-12px);background:var(--accent);color:#050d14;padding:7px 20px;border-radius:20px;font-family:'Orbitron',monospace;font-size:10px;font-weight:bold;opacity:0;transition:all .3s;z-index:1000;pointer-events:none;white-space:nowrap;letter-spacing:1px;}
+#notif.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-      #side-menu {
-        width: 250px;
-        background-color: #f9f9f9;
-        padding: 20px;
-        overflow-y: auto;
-        border-left: 1px solid #ddd;
-      }
+/* add ball collapsible */
+#add-form{overflow:hidden;transition:max-height .3s ease;max-height:0;}
+#add-form.open{max-height:400px;}
 
-      .menu-section {
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid #eee;
-      }
+/* scrollbars */
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
 
-      .menu-section h3 {
-        margin-top: 0;
-        color: #172b36;
-      }
+<!-- INTRO -->
+<div id="intro">
+  <h1>PONG WARS</h1>
+  <p class="sub">CHAOS TERRITORY SIMULATION</p>
+  <div class="dots">
+    <div class="dot" style="background:#D9E8E3"></div>
+    <div class="dot" style="background:#FFC801"></div>
+    <div class="dot" style="background:#114C5A"></div>
+  </div>
+  <button class="start-btn" onclick="boot()">INITIALIZE</button>
+</div>
 
-      button {
-        background-color: #114C5A;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        margin: 5px 0;
-        width: 100%;
-      }
+<!-- APP -->
+<div id="app" style="display:none;">
 
-      button:hover {
-        background-color: #0d3a45;
-      }
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="logo">⚔ PONG WARS</div>
+    <div id="score-bar-outer">
+      <div id="sbar-a" style="width:50%"></div>
+      <div id="sbar-b" style="width:50%"></div>
+    </div>
+    <div id="score-items"><!-- filled by JS --></div>
+    <div id="tick-ctr">TICK 0</div>
+    <div id="topbar-right">
+      <div class="status-dot run" id="sdot"></div>
+      <button class="btn pri" id="pause-btn" onclick="togglePause()">⏸ PAUSE</button>
+      <button class="btn" onclick="resetGame()">↺ RESET</button>
+      <button class="btn" id="snd-btn" onclick="toggleSound()">🔇</button>
+    </div>
+  </div>
 
-      button.remove {
-        background-color: #d9534f;
-      }
+  <!-- MAIN -->
+  <div id="main">
 
-      button.remove:hover {
-        background-color: #c9302c;
-      }
+    <!-- LEFT PANEL -->
+    <div class="panel" id="left-panel">
 
-      .ball-item, .color-item {
-        display: flex;
-        align-items: center;
-        margin: 8px 0;
-        padding: 8px;
-        background-color: #fff;
-        border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-
-      .ball-preview {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        margin-right: 10px;
-      }
-
-      .ball-info {
-        flex: 1;
-      }
-
-      .ball-bounces {
-        font-size: 12px;
-        color: #666;
-      }
-
-      .color-preview {
-        width: 20px;
-        height: 20px;
-        border-radius: 4px;
-        margin-right: 10px;
-        border: 1px solid #ddd;
-      }
-
-      .color-name {
-        flex: 1;
-      }
-
-      input[type="color"] {
-        width: 100%;
-        margin: 5px 0;
-        height: 30px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-      }
-
-      select {
-        width: 100%;
-        padding: 8px;
-        margin: 5px 0;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-      }
-
-      #ball-creation {
-        background-color: #fff;
-        padding: 10px;
-        border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-
-      .form-group {
-        margin-bottom: 10px;
-      }
-
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-        color: #333;
-      }
-
-      #made {
-        text-align: center;
-        line-height: 1.5;
-        font-family: monospace;
-        margin-top: 20px;
-        font-size: 10px;
-        color: #172b36;
-      }
-
-      #made a {
-        color: #172b36;
-      }
-
-      .region-preview {
-        display: flex;
-        gap: 5px;
-        margin: 5px 0;
-      }
-
-      .region-option {
-        flex: 1;
-        text-align: center;
-        padding: 5px;
-        border: 2px solid transparent;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-
-      .region-option.selected {
-        border-color: #114C5A;
-      }
-
-      .new-region-indicator {
-        color: #FF9932;
-        font-weight: bold;
-      }
-
-      .dragging {
-        cursor: grabbing !important;
-      }
-
-      .region-dragging {
-        cursor: move !important;
-      }
-
-      .grid-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 1;
-      }
-
-      .grid-line {
-        stroke: rgba(0, 0, 0, 0.1);
-        stroke-width: 1;
-      }
-
-      #footer-text {
-        text-align: center;
-        margin-top: 20px;
-        font-size: 12px;
-        color: #666;
-        font-style: italic;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div id="container">
-      <div id="game-area">
-        <div id="stats">
-          <div id="percentage">Day: 50% | Night: 50%</div>
-          <div id="game-controls">
-            <button id="control-btn">Pause</button>
-            <button id="resume-btn">Resume Game</button>
-            <div id="iteration">Iteration: 0</div>
+      <div class="p-sec">
+        <h4>SIMULATION</h4>
+        <div class="frow">
+          <label>SPEED <span style="float:right;color:var(--accent)" id="speed-kh">(+/-)</span></label>
+          <div class="sw">
+            <input type="range" id="spd-sl" min="1" max="20" value="8" oninput="setSpeed(+this.value)">
+            <span class="sv" id="spd-v">8</span>
           </div>
         </div>
-        <canvas id="pongCanvas" width="600" height="600"></canvas>
-        <svg class="grid-overlay" id="gridOverlay" width="600" height="600"></svg>
-        <div id="placement-overlay">
-          <div id="placement-instructions">
-            <h3>Place Your New Ball and Region</h3>
-            <p>Drag the ball to position it</p>
-            <p>Drag the colored square to position the new region</p>
-            <p>Click "Resume Game" when ready</p>
+        <div class="frow">
+          <label>PIXEL SIZE</label>
+          <div class="sw">
+            <input type="range" id="px-sl" min="5" max="60" value="25" step="5" oninput="setPixel(+this.value)">
+            <span class="sv" id="px-v">25</span>
           </div>
+        </div>
+        <div class="frow">
+          <label>CHAOS</label>
+          <div class="sw">
+            <input type="range" id="chaos-sl" min="0" max="100" value="10" oninput="setChaos(+this.value)">
+            <span class="sv" id="chaos-v">10%</span>
+          </div>
+        </div>
+        <div class="trow"><span>TRAILS</span><label class="tog"><input type="checkbox" id="tog-trails" checked onchange="showTrails=this.checked;if(!showTrails)balls.forEach(b=>b.trail=[]);save()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+        <div class="trow"><span>PARTICLES</span><label class="tog"><input type="checkbox" id="tog-parts" checked onchange="showParts=this.checked;if(!showParts)particles=[];save()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+        <div class="trow"><span>GRID LINES</span><label class="tog"><input type="checkbox" id="tog-grid" onchange="showGrid=this.checked;save()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+        <div class="trow"><span>GLOW</span><label class="tog"><input type="checkbox" id="tog-glow" checked onchange="showGlow=this.checked;save()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+      </div>
+
+      <div class="p-sec">
+        <h4>COLOR SCHEME</h4>
+        <div class="scheme-grid" id="sch-grid"><!-- filled --></div>
+      </div>
+
+      <div class="p-sec">
+        <h4>ADD BALL <span class="sec-action" onclick="toggleAddForm()">[ + ]</span></h4>
+        <div id="add-form">
+          <div class="frow">
+            <label>BALL COLOR</label>
+            <input type="color" id="nb-color" value="#FFC801">
+          </div>
+          <div class="frow">
+            <label>TERRITORY</label>
+            <input type="color" id="nb-terr" value="#D9E8E3">
+          </div>
+          <div class="frow">
+            <label>SPEED MULT</label>
+            <div class="sw">
+              <input type="range" id="nb-spd" min="0.5" max="2" step="0.1" value="1" oninput="document.getElementById('nb-spd-v').textContent=parseFloat(this.value).toFixed(1)+'×'">
+              <span class="sv" id="nb-spd-v">1.0×</span>
+            </div>
+          </div>
+          <button class="btn pri" onclick="addBall()" style="width:100%;margin-top:4px;">⚡ DEPLOY BALL</button>
         </div>
       </div>
-      <div id="side-menu">
-        <div class="menu-section">
-          <h3>Add Ball</h3>
-          <div id="ball-creation">
-            <div class="form-group">
-              <label>Ball Color:</label>
-              <input type="color" id="newBallColor" value="#114C5A">
-            </div>
-            
-            <div class="form-group">
-              <label>Region Color:</label>
-              <select id="regionColorSelect">
-                <option value="#D9E8E3">Day</option>
-                <option value="#114C5A">Night</option>
-              </select>
-            </div>
 
-            <div class="form-group">
-              <label>Region Type:</label>
-              <div class="region-preview">
-                <div class="region-option selected" data-type="existing" data-region="day">
-                  <div>Join Day</div>
-                  <div style="background-color: #D9E8E3; height: 10px; border-radius: 2px;"></div>
-                </div>
-                <div class="region-option" data-type="existing" data-region="night">
-                  <div>Join Night</div>
-                  <div style="background-color: #114C5A; height: 10px; border-radius: 2px;"></div>
-                </div>
-                <div class="region-option" data-type="new">
-                  <div class="new-region-indicator">New Region</div>
-                  <div style="background: linear-gradient(90deg, #D9E8E3 50%, #114C5A 50%); height: 10px; border-radius: 2px;"></div>
-                </div>
-              </div>
-            </div>
+      <div class="p-sec">
+        <h4>ACTIVE BALLS</h4>
+        <div id="balls-list"><!-- filled --></div>
+      </div>
 
-            <div class="form-group" id="new-region-color-group" style="display: none;">
-              <label>New Region Color:</label>
-              <input type="color" id="newRegionColor" value="#FF9932">
-            </div>
+    </div>
 
-            <div class="form-group">
-              <label>
-                <input type="checkbox" id="autoPlacement"> Auto-place (no pause)
-              </label>
-            </div>
-            
-            <button id="addBallBtn">Add New Ball</button>
-          </div>
-        </div>
-        
-        <div class="menu-section">
-          <h3>Active Balls</h3>
-          <div id="ballsList"></div>
-        </div>
-        
-        <div class="menu-section">
-          <h3>Colors</h3>
-          <div id="colorsList"></div>
-          <button id="addColorBtn">Add New Color</button>
-        </div>
-        
-        <div id="made">
-          Based on <a href="https://pong-wars.koenvangilst.nl/">Pong Wars by Koen van Gilst</a>
-        </div>
-        
-        <div id="footer-text">
-          This is a randomness simulation in vanilla JavaScript
-        </div>
+    <!-- CANVAS AREA -->
+    <div id="canvas-area">
+      <div id="canvas-wrap">
+        <canvas id="pongCanvas"></canvas>
+        <canvas id="particleCanvas"></canvas>
+      </div>
+      <div id="fps-tag">FPS: --</div>
+      <button class="btn sm" id="fs-btn" onclick="goFull()" title="Fullscreen (F)">⛶</button>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel" id="right-panel">
+
+      <div class="p-sec">
+        <h4>LIVE STATS</h4>
+        <div id="live-stats"><!-- filled --></div>
+      </div>
+
+      <div class="p-sec">
+        <h4>TERRITORY HISTORY</h4>
+        <canvas id="histCv" height="80"></canvas>
+      </div>
+
+      <div class="p-sec">
+        <h4>RECORDS 🏆</h4>
+        <div id="hiscores"><!-- filled --></div>
+        <button class="btn red sm" onclick="clearHS()" style="width:100%;margin-top:7px;">CLEAR RECORDS</button>
+      </div>
+
+      <div class="p-sec">
+        <h4>SHORTCUTS</h4>
+        <div class="kb-row"><span class="kb-key">SPACE</span><span class="kb-val">Pause / Resume</span></div>
+        <div class="kb-row"><span class="kb-key">R</span><span class="kb-val">Reset</span></div>
+        <div class="kb-row"><span class="kb-key">+ / −</span><span class="kb-val">Speed</span></div>
+        <div class="kb-row"><span class="kb-key">P / [</span><span class="kb-val">Pixel ↑ / ↓</span></div>
+        <div class="kb-row"><span class="kb-key">1–6</span><span class="kb-val">Color Scheme</span></div>
+        <div class="kb-row"><span class="kb-key">F</span><span class="kb-val">Fullscreen</span></div>
+        <div class="kb-row"><span class="kb-key">M</span><span class="kb-val">Sound</span></div>
+        <div class="kb-row"><span class="kb-key">Click</span><span class="kb-val">Spawn Burst</span></div>
+      </div>
+
+      <div style="text-align:center;margin-top:10px;font-size:9px;color:var(--text-dim);line-height:1.8;">
+        Based on <a href="https://pong-wars.koenvangilst.nl/" style="color:var(--text-dim)">Pong Wars</a> by Koen van Gilst<br>
+        Enhanced simulation in vanilla JS
       </div>
     </div>
 
-    <script>
-      // Source palette: https://twitter.com/AlexCristache/status/1738610343499157872
-      // Idea for Pong Wars: https://twitter.com/nicolasdnl/status/1749715070928433161
+  </div>
 
-      const colorPalette = {
-        ArcticPowder: "#F1F6F4",
-        MysticMint: "#D9E8E3",
-        Forsythia: "#FFC801",
-        DeepSaffron: "#FF9932",
-        NocturnalExpedition: "#114C5A",
-        OceanicNoir: "#172B36",
-      };
+  <!-- MOBILE BAR -->
+  <div id="mob-bar">
+    <button class="btn" onclick="togglePause()" id="mob-pause">⏸</button>
+    <button class="btn" onclick="resetGame()">↺</button>
+    <button class="btn" onclick="openDrawer('settings')">⚙ CONTROLS</button>
+    <button class="btn" onclick="openDrawer('scheme')">🎨 SCHEME</button>
+    <button class="btn" onclick="openDrawer('add')">+ BALL</button>
+    <button class="btn" onclick="openDrawer('stats')">📊 STATS</button>
+  </div>
 
-      const canvas = document.getElementById("pongCanvas");
-      const ctx = canvas.getContext("2d");
-      const gridOverlay = document.getElementById("gridOverlay");
-      const percentageElement = document.getElementById("percentage");
-      const iterationElement = document.getElementById("iteration");
-      const ballsListElement = document.getElementById("ballsList");
-      const colorsListElement = document.getElementById("colorsList");
-      const addBallBtn = document.getElementById("addBallBtn");
-      const addColorBtn = document.getElementById("addColorBtn");
-      const newBallColorInput = document.getElementById("newBallColor");
-      const newRegionColorInput = document.getElementById("newRegionColor");
-      const newRegionColorGroup = document.getElementById("new-region-color-group");
-      const regionColorSelect = document.getElementById("regionColorSelect");
-      const controlBtn = document.getElementById("control-btn");
-      const resumeBtn = document.getElementById("resume-btn");
-      const placementOverlay = document.getElementById("placement-overlay");
-      const autoPlacementCheckbox = document.getElementById("autoPlacement");
+</div><!-- /app -->
 
-      // Default colors
-      const DAY_COLOR = colorPalette.MysticMint;
-      const DAY_BALL_COLOR = colorPalette.NocturnalExpedition;
-      const NIGHT_COLOR = colorPalette.NocturnalExpedition;
-      const NIGHT_BALL_COLOR = colorPalette.MysticMint;
-      
-      const SQUARE_SIZE = 25;
-      const MIN_SPEED = 5;
-      const MAX_SPEED = 10;
-      const NEW_REGION_SIZE = 3; // Size of new region in squares
+<!-- MOBILE DRAWER -->
+<div id="mob-drawer-overlay" onclick="closeDrawer()"></div>
+<div id="mob-drawer">
+  <div id="mob-drawer-head">
+    <h3 id="drawer-title">CONTROLS</h3>
+    <button class="btn sm" onclick="closeDrawer()">✕ CLOSE</button>
+  </div>
+  <div id="drawer-body"><!-- filled dynamically --></div>
+</div>
 
-      const numSquaresX = canvas.width / SQUARE_SIZE;
-      const numSquaresY = canvas.height / SQUARE_SIZE;
+<!-- NOTIFICATION -->
+<div id="notif"></div>
 
-      let dayScore = 0;
-      let nightScore = 0;
-      let iteration = 0;
-      let gameRunning = true;
-      let placementMode = false;
-      let pendingBall = null;
-      let pendingRegion = null;
-      let selectedRegionType = "existing";
-      let selectedExistingRegion = "day";
-      let isDraggingBall = false;
-      let isDraggingRegion = false;
-      let dragOffsetX = 0;
-      let dragOffsetY = 0;
+<script>
+// ════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════
+const SCHEMES = {
+  arctic:  {name:'Arctic', e:'❄️', c:['#D9E8E3','#114C5A'], bc:['#114C5A','#D9E8E3'], bg:'#0d1b2a', acc:'#FFC801'},
+  sunset:  {name:'Sunset', e:'🌅', c:['#FFD4A3','#7B2D8B'], bc:['#7B2D8B','#FFD4A3'], bg:'#1a0a1e', acc:'#FF6B35'},
+  neon:    {name:'Neon',   e:'⚡', c:['#00F5D4','#7B2FBE'], bc:['#7B2FBE','#00F5D4'], bg:'#0a0520', acc:'#FF0080'},
+  forest:  {name:'Forest', e:'🌲', c:['#C5E8C5','#1B4332'], bc:['#1B4332','#C5E8C5'], bg:'#060f08', acc:'#69DB7C'},
+  mono:    {name:'Mono',   e:'◐', c:['#E8E8E8','#1A1A1A'], bc:['#1A1A1A','#E8E8E8'], bg:'#0f0f0f', acc:'#999999'},
+  lava:    {name:'Lava',   e:'🌋', c:['#FF6B35','#1A0A1E'], bc:['#1A0A1E','#FF6B35'], bg:'#0a0005', acc:'#FFD700'}
+};
 
-      const squares = [];
-      const balls = [];
-      const colors = [
-        { name: "Day", value: DAY_COLOR },
-        { name: "Night", value: NIGHT_COLOR }
-      ];
+const SCHEME_KEYS = Object.keys(SCHEMES);
 
-      // Color statistics
-      const colorStats = {};
+// ════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════
+const canvas   = document.getElementById('pongCanvas');
+const ctx      = canvas.getContext('2d');
+const pCanvas  = document.getElementById('particleCanvas');
+const pCtx     = pCanvas.getContext('2d');
 
-      // Initialize the game
-      function init() {
-        // Populate the fields, one half day, one half night
-        for (let i = 0; i < numSquaresX; i++) {
-          squares[i] = [];
-          for (let j = 0; j < numSquaresY; j++) {
-            squares[i][j] = i < numSquaresX / 2 ? DAY_COLOR : NIGHT_COLOR;
-          }
-        }
+let SQ = 25, BASE_SPD = 8, CHAOS = 0.01;
+let scheme = 'arctic';
+let running = false, booted = false;
+let showTrails = true, showParts = true, showGrid = false, showGlow = true;
+let soundOn = false;
+let numX = 0, numY = 0;
+let squares = [], balls = [], particles = [];
+let iteration = 0, startTime = 0, ballIdCtr = 0;
+let frameCount = 0, fps = 60, lastFpsT = 0;
+let scoreHistory = [];
+let animId = null;
+let audioCtx = null;
+let _dominated = null;
 
-        // Initialize color stats
-        updateColorStats();
+// ════════════════════════════════════════════════════
+//  STORAGE
+// ════════════════════════════════════════════════════
+function save() {
+  try {
+    localStorage.setItem('pw_cfg', JSON.stringify({
+      sq:SQ, spd:BASE_SPD, chaos:CHAOS, scheme, trails:showTrails,
+      parts:showParts, grid:showGrid, glow:showGlow, sound:soundOn
+    }));
+  } catch(e) {}
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem('pw_cfg')||'{}');
+    if(d.sq)    SQ       = d.sq;
+    if(d.spd)   BASE_SPD = d.spd;
+    if(d.chaos !== undefined) CHAOS = d.chaos;
+    if(d.scheme && SCHEMES[d.scheme]) scheme = d.scheme;
+    if(d.trails !== undefined) showTrails = d.trails;
+    if(d.parts  !== undefined) showParts  = d.parts;
+    if(d.grid   !== undefined) showGrid   = d.grid;
+    if(d.glow   !== undefined) showGlow   = d.glow;
+    if(d.sound  !== undefined) soundOn    = d.sound;
+  } catch(e) {}
+}
+function saveHS(team, score) {
+  try {
+    const hs = JSON.parse(localStorage.getItem('pw_hs')||'[]');
+    hs.push({team, score:Math.round(score*10)/10, date:new Date().toLocaleDateString(), scheme});
+    hs.sort((a,b)=>b.score-a.score);
+    hs.splice(8);
+    localStorage.setItem('pw_hs', JSON.stringify(hs));
+    renderHS();
+  } catch(e) {}
+}
+function getHS() {
+  try { return JSON.parse(localStorage.getItem('pw_hs')||'[]'); } catch(e) { return []; }
+}
+function clearHS() {
+  localStorage.removeItem('pw_hs'); renderHS(); notify('RECORDS CLEARED');
+}
+function saveTotals() {
+  try {
+    const t = JSON.parse(localStorage.getItem('pw_totals')||'{"games":0,"bounces":0,"ticks":0}');
+    t.games += 1;
+    t.bounces += balls.reduce((s,b)=>s+b.bounces,0);
+    t.ticks += iteration;
+    localStorage.setItem('pw_totals', JSON.stringify(t));
+  } catch(e) {}
+}
+function getTotals() {
+  try { return JSON.parse(localStorage.getItem('pw_totals')||'{"games":0,"bounces":0,"ticks":0}'); } catch(e) { return {games:0,bounces:0,ticks:0}; }
+}
 
-        // Add initial balls
-        balls.push({
-          id: 1,
-          x: canvas.width / 4,
-          y: canvas.height / 2,
-          dx: 8,
-          dy: -8,
-          reverseColor: DAY_COLOR,
-          ballColor: DAY_BALL_COLOR,
-          bounces: 0
-        });
-        
-        balls.push({
-          id: 2,
-          x: (canvas.width / 4) * 3,
-          y: canvas.height / 2,
-          dx: -8,
-          dy: 8,
-          reverseColor: NIGHT_COLOR,
-          ballColor: NIGHT_BALL_COLOR,
-          bounces: 0
-        });
+// ════════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════════
+function boot() {
+  const intro = document.getElementById('intro');
+  intro.classList.add('gone');
+  setTimeout(()=>intro.style.display='none', 550);
 
-        // Set up region selection
-        setupRegionSelection();
-        
-        // Update UI
-        updateBallsList();
-        updateColorsList();
-        updatePercentageDisplay();
-        
-        // Draw grid
-        drawGrid();
-      }
+  document.getElementById('app').style.display = 'flex';
 
-      function drawGrid() {
-        // Clear previous grid
-        gridOverlay.innerHTML = '';
-        
-        // Draw vertical lines
-        for (let x = 0; x <= canvas.width; x += SQUARE_SIZE) {
-          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-          line.setAttribute("class", "grid-line");
-          line.setAttribute("x1", x);
-          line.setAttribute("y1", 0);
-          line.setAttribute("x2", x);
-          line.setAttribute("y2", canvas.height);
-          gridOverlay.appendChild(line);
-        }
-        
-        // Draw horizontal lines
-        for (let y = 0; y <= canvas.height; y += SQUARE_SIZE) {
-          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-          line.setAttribute("class", "grid-line");
-          line.setAttribute("x1", 0);
-          line.setAttribute("y1", y);
-          line.setAttribute("x2", canvas.width);
-          line.setAttribute("y2", y);
-          gridOverlay.appendChild(line);
-        }
-      }
+  load();
+  applySchemeCSS(scheme);
+  syncUI();
+  buildSchemeGrid();
+  initGame();
+  setupEvents();
 
-      function setupRegionSelection() {
-        const regionOptions = document.querySelectorAll('.region-option');
-        regionOptions.forEach(option => {
-          option.addEventListener('click', function() {
-            // Remove selected class from all options
-            regionOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Add selected class to clicked option
-            this.classList.add('selected');
-            
-            // Update selection variables
-            selectedRegionType = this.getAttribute('data-type');
-            if (selectedRegionType === 'existing') {
-              selectedExistingRegion = this.getAttribute('data-region');
-              newRegionColorGroup.style.display = 'none';
-              document.querySelector('.form-group:nth-child(2)').style.display = 'block';
-            } else {
-              newRegionColorGroup.style.display = 'block';
-              document.querySelector('.form-group:nth-child(2)').style.display = 'none';
-            }
-          });
-        });
-      }
+  booted = true;
+  running = true;
+  requestAnimationFrame(loop);
+}
 
-      function drawBall(ball) {
+function syncUI() {
+  document.getElementById('spd-sl').value = BASE_SPD;
+  document.getElementById('spd-v').textContent = BASE_SPD;
+  document.getElementById('px-sl').value = SQ;
+  document.getElementById('px-v').textContent = SQ;
+  const cv = Math.round(CHAOS * 1000);
+  document.getElementById('chaos-sl').value = cv;
+  document.getElementById('chaos-v').textContent = cv + '%';
+  document.getElementById('tog-trails').checked = showTrails;
+  document.getElementById('tog-parts').checked  = showParts;
+  document.getElementById('tog-grid').checked   = showGrid;
+  document.getElementById('tog-glow').checked   = showGlow;
+  document.getElementById('snd-btn').textContent = soundOn ? '🔊' : '🔇';
+}
+
+function applySchemeCSS(key) {
+  const s = SCHEMES[key];
+  const r = document.documentElement.style;
+  r.setProperty('--accent', s.acc);
+  document.body.style.background = s.bg;
+  // Update intro dots if still visible
+  const dots = document.querySelectorAll('#intro .dot');
+  if(dots.length >= 2) {
+    dots[0].style.background = s.c[0];
+    dots[2] && (dots[2].style.background = s.c[1]);
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  GAME INIT
+// ════════════════════════════════════════════════════
+function initGame() {
+  if (iteration > 200) saveTotals();
+
+  const area = document.getElementById('canvas-area');
+  const w = area.clientWidth  || window.innerWidth;
+  const h = area.clientHeight || (window.innerHeight - 100);
+  const raw = Math.min(w, h) * 0.93;
+  const snapped = Math.floor(raw / SQ) * SQ;
+  const size = Math.max(snapped, SQ * 4);
+
+  canvas.width  = size; canvas.height  = size;
+  canvas.style.width  = size+'px'; canvas.style.height  = size+'px';
+  pCanvas.width = size; pCanvas.height = size;
+  pCanvas.style.width = size+'px'; pCanvas.style.height = size+'px';
+
+  numX = size / SQ; numY = size / SQ;
+
+  const sc = SCHEMES[scheme];
+  squares = [];
+  for (let i = 0; i < numX; i++) {
+    squares[i] = [];
+    for (let j = 0; j < numY; j++) {
+      squares[i][j] = i < numX / 2 ? sc.c[0] : sc.c[1];
+    }
+  }
+
+  balls = []; particles = []; scoreHistory = [];
+  iteration = 0; startTime = Date.now(); ballIdCtr = 0;
+  _dominated = null;
+
+  const spd = BASE_SPD;
+  balls.push(mkBall({x:size/4,     y:size/2, dx:spd,  dy:-spd, bc:sc.bc[0], tc:sc.c[0], name:'ALPHA'}));
+  balls.push(mkBall({x:size*3/4,   y:size/2, dx:-spd, dy:spd,  bc:sc.bc[1], tc:sc.c[1], name:'OMEGA'}));
+
+  renderBalls(); renderHS(); updateScore(); updateStats();
+  buildSchemeGrid();
+}
+
+function mkBall(o) {
+  return {
+    id: ++ballIdCtr,
+    x: o.x, y: o.y,
+    dx: o.dx, dy: o.dy,
+    bc: o.bc, tc: o.tc,
+    name: o.name || ('BALL ' + ballIdCtr),
+    bounces: 0,
+    mult: o.mult || 1,
+    trail: []
+  };
+}
+
+function resetGame() {
+  running = false;
+  initGame();
+  running = true;
+  updatePauseBtn();
+  if (!animId) requestAnimationFrame(loop);
+  notify('SIMULATION RESET');
+}
+
+// ════════════════════════════════════════════════════
+//  GAME LOOP
+// ════════════════════════════════════════════════════
+function loop(ts) {
+  if (!running) { animId = null; return; }
+
+  // FPS
+  frameCount++;
+  const now = performance.now();
+  if (now - lastFpsT >= 1000) {
+    fps = frameCount; frameCount = 0; lastFpsT = now;
+    document.getElementById('fps-tag').textContent = 'FPS: ' + fps;
+  }
+
+  update();
+  render();
+  animId = requestAnimationFrame(loop);
+}
+
+// ════════════════════════════════════════════════════
+//  UPDATE
+// ════════════════════════════════════════════════════
+function update() {
+  iteration++;
+
+  // Periodic updates
+  if (iteration % 4 === 0)  updateTickCtr();
+  if (iteration % 45 === 0) { updateScore(); updateStats(); }
+  if (iteration % 60 === 0) { recordHistory(); drawHistory(); }
+  if (iteration % 180 === 0) { renderBalls(); }
+
+  // Balls
+  for (const b of balls) {
+    // Trail
+    if (showTrails) {
+      b.trail.push({x:b.x, y:b.y});
+      if (b.trail.length > 18) b.trail.shift();
+    } else {
+      b.trail = [];
+    }
+
+    // Move
+    b.x += b.dx * b.mult;
+    b.y += b.dy * b.mult;
+
+    // Boundary
+    const r = SQ / 2;
+    if (b.x > canvas.width - r || b.x < r) {
+      b.dx = -b.dx; b.x = Math.max(r, Math.min(canvas.width - r, b.x));
+      b.bounces++; beep(b.bc, 0);
+    }
+    if (b.y > canvas.height - r || b.y < r) {
+      b.dy = -b.dy; b.y = Math.max(r, Math.min(canvas.height - r, b.y));
+      b.bounces++; beep(b.bc, 0);
+    }
+
+    // Square collision
+    squareCollide(b);
+
+    // Chaos
+    b.dx += (Math.random() - .5) * CHAOS;
+    b.dy += (Math.random() - .5) * CHAOS;
+
+    // Speed clamp
+    const spd = Math.hypot(b.dx, b.dy);
+    const tgt = BASE_SPD * b.mult;
+    if (spd > 0 && (spd > tgt * 1.6 || spd < tgt * 0.4)) {
+      b.dx = (b.dx / spd) * tgt;
+      b.dy = (b.dy / spd) * tgt;
+    }
+  }
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.06;
+    p.vx *= 0.97;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function squareCollide(b) {
+  for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+    const cx = b.x + Math.cos(angle) * (SQ / 2);
+    const cy = b.y + Math.sin(angle) * (SQ / 2);
+    const i = Math.floor(cx / SQ);
+    const j = Math.floor(cy / SQ);
+    if (i >= 0 && i < numX && j >= 0 && j < numY && squares[i][j] !== b.tc) {
+      squares[i][j] = b.tc;
+      if (Math.abs(Math.cos(angle)) > Math.abs(Math.sin(angle))) b.dx = -b.dx;
+      else b.dy = -b.dy;
+      b.bounces++;
+      beep(b.bc, 1);
+      if (showParts) burst(i * SQ + SQ/2, j * SQ + SQ/2, b.bc);
+    }
+  }
+}
+
+function burst(x, y, color) {
+  const n = 5 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 0.8 + Math.random() * 2.5;
+    particles.push({
+      x, y,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd - 1.2,
+      color,
+      life: 1,
+      decay: 0.035 + Math.random() * 0.04,
+      size: 2 + Math.random() * 3
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════════
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Squares
+  for (let i = 0; i < numX; i++) {
+    for (let j = 0; j < numY; j++) {
+      ctx.fillStyle = squares[i][j];
+      ctx.fillRect(i*SQ, j*SQ, SQ, SQ);
+    }
+  }
+
+  // Grid
+  if (showGrid) {
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= numX; i++) {
+      ctx.beginPath(); ctx.moveTo(i*SQ,0); ctx.lineTo(i*SQ,canvas.height); ctx.stroke();
+    }
+    for (let j = 0; j <= numY; j++) {
+      ctx.beginPath(); ctx.moveTo(0,j*SQ); ctx.lineTo(canvas.width,j*SQ); ctx.stroke();
+    }
+  }
+
+  // Trails
+  if (showTrails) {
+    for (const b of balls) {
+      const tr = b.trail;
+      for (let i = 0; i < tr.length; i++) {
+        const a = (i / tr.length) * 0.35;
+        const r = (SQ/2) * (i / tr.length) * 0.9;
         ctx.beginPath();
-        ctx.arc(ball.x, ball.y, SQUARE_SIZE / 2, 0, Math.PI * 2, false);
-        ctx.fillStyle = ball.ballColor;
+        ctx.arc(tr[i].x, tr[i].y, Math.max(r, 1), 0, Math.PI*2);
+        ctx.fillStyle = hexRgba(b.bc, a);
         ctx.fill();
-        ctx.closePath();
       }
+    }
+  }
 
-      function drawSquares() {
-        // Reset scores
-        for (const color in colorStats) {
-          colorStats[color] = 0;
-        }
+  // Balls
+  for (const b of balls) {
+    if (showGlow) {
+      const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, SQ * 1.2);
+      g.addColorStop(0, hexRgba(b.bc, 0.35));
+      g.addColorStop(1, hexRgba(b.bc, 0));
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, SQ * 1.2, 0, Math.PI*2);
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
 
-        for (let i = 0; i < numSquaresX; i++) {
-          for (let j = 0; j < numSquaresY; j++) {
-            ctx.fillStyle = squares[i][j];
-            ctx.fillRect(i * SQUARE_SIZE, j * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
+    // Main circle
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, SQ/2, 0, Math.PI*2);
+    ctx.fillStyle = b.bc;
+    ctx.fill();
 
-            // Update color statistics
-            const color = squares[i][j];
-            colorStats[color] = (colorStats[color] || 0) + 1;
-          }
-        }
-        
-        // Update percentage display
-        updatePercentageDisplay();
+    // Inner ring
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, SQ/2, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Highlight
+    ctx.beginPath();
+    ctx.arc(b.x - SQ*0.14, b.y - SQ*0.14, SQ*0.18, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.fill();
+  }
+
+  // Particles
+  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+  if (showParts) {
+    for (const p of particles) {
+      pCtx.beginPath();
+      pCtx.arc(p.x, p.y, Math.max(p.size * p.life, 0.5), 0, Math.PI*2);
+      pCtx.fillStyle = hexRgba(p.color, p.life * 0.8);
+      pCtx.fill();
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  SCORE / STATS
+// ════════════════════════════════════════════════════
+function getCounts() {
+  const sc = SCHEMES[scheme];
+  let a = 0, b = 0, other = 0;
+  const total = numX * numY;
+  for (let i = 0; i < numX; i++)
+    for (let j = 0; j < numY; j++) {
+      if (squares[i][j] === sc.c[0]) a++;
+      else if (squares[i][j] === sc.c[1]) b++;
+      else other++;
+    }
+  return { a, b, other, total };
+}
+
+function updateScore() {
+  const sc = SCHEMES[scheme];
+  const {a, b, total} = getCounts();
+  const pa = a / total * 100, pb = b / total * 100;
+
+  // Topbar score items
+  document.getElementById('score-items').innerHTML = `
+    <div class="sc-item"><div class="sc-dot" style="background:${sc.bc[0]}"></div><span class="sc-pct" style="color:${sc.bc[0]}">${pa.toFixed(1)}%</span></div>
+    <div class="sc-item" style="font-size:10px;color:var(--text-dim)">vs</div>
+    <div class="sc-item"><div class="sc-dot" style="background:${sc.bc[1]}"></div><span class="sc-pct" style="color:${sc.bc[1]}">${pb.toFixed(1)}%</span></div>
+  `;
+
+  // Bar
+  document.getElementById('sbar-a').style.cssText = `width:${pa}%;background:${sc.c[0]}`;
+  document.getElementById('sbar-b').style.cssText = `width:${pb}%;background:${sc.c[1]}`;
+
+  // Dominance check
+  if (pa > 80 && _dominated !== 'A') {
+    _dominated = 'A'; saveHS('ALPHA', pa); notify('👑 ALPHA DOMINATES!');
+  } else if (pb > 80 && _dominated !== 'B') {
+    _dominated = 'B'; saveHS('OMEGA', pb); notify('👑 OMEGA DOMINATES!');
+  } else if (pa < 80 && pb < 80) {
+    _dominated = null;
+  }
+}
+
+function updateTickCtr() {
+  document.getElementById('tick-ctr').textContent = 'TICK ' + iteration.toLocaleString();
+}
+
+function updateStats() {
+  const el = document.getElementById('live-stats');
+  if (!el) return;
+  const sc = SCHEMES[scheme];
+  const {a, b, total} = getCounts();
+  const tot = getTotals();
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const totalBounces = balls.reduce((s,b)=>s+b.bounces,0);
+
+  const rows = [
+    ['ALPHA TERR', (a/total*100).toFixed(1)+'%'],
+    ['OMEGA TERR', (b/total*100).toFixed(1)+'%'],
+    ['ELAPSED',   fmtTime(elapsed)],
+    ['TICKS',     iteration.toLocaleString()],
+    ['FPS',       fps],
+    ['BALLS',     balls.length],
+    ['PARTICLES', particles.length],
+    ['BOUNCES',   totalBounces.toLocaleString()],
+    ['GRID',      numX+'×'+numY+' ('+total+')'],
+    ['PIXEL SZ',  SQ+'px'],
+    ['SCHEME',    sc.name],
+    ['SESSIONS',  tot.games],
+    ['TOTAL BOUNCES', tot.bounces.toLocaleString()],
+  ];
+
+  el.innerHTML = rows.map(([k,v])=>`<div class="stat-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+}
+
+function recordHistory() {
+  const {a, total} = getCounts();
+  scoreHistory.push(a / total);
+  if (scoreHistory.length > 180) scoreHistory.shift();
+}
+
+function drawHistory() {
+  const hc = document.getElementById('histCv');
+  if (!hc || !hc.offsetWidth) return;
+  const hCtx = hc.getContext('2d');
+  const W = hc.width = hc.offsetWidth, H = 80;
+  hc.height = H;
+  hCtx.clearRect(0,0,W,H);
+
+  hCtx.fillStyle = 'rgba(0,0,0,0.35)';
+  hCtx.fillRect(0,0,W,H);
+
+  if (scoreHistory.length < 2) return;
+  const sc = SCHEMES[scheme];
+
+  // midline
+  hCtx.beginPath(); hCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+  hCtx.lineWidth = 1;
+  hCtx.moveTo(0, H/2); hCtx.lineTo(W, H/2); hCtx.stroke();
+
+  // Line
+  hCtx.beginPath(); hCtx.lineWidth = 1.5; hCtx.strokeStyle = sc.c[0];
+  for (let i = 0; i < scoreHistory.length; i++) {
+    const x = (i/(scoreHistory.length-1))*W;
+    const y = (1-scoreHistory[i])*H;
+    i===0 ? hCtx.moveTo(x,y) : hCtx.lineTo(x,y);
+  }
+  hCtx.stroke();
+
+  // Fill
+  hCtx.lineTo(W,H); hCtx.lineTo(0,H); hCtx.closePath();
+  hCtx.fillStyle = hexRgba(sc.c[0], 0.12);
+  hCtx.fill();
+
+  // Labels
+  const last = scoreHistory[scoreHistory.length-1];
+  hCtx.fillStyle = sc.c[0];
+  hCtx.font = '9px Share Tech Mono,monospace';
+  hCtx.fillText('A:'+(last*100).toFixed(1)+'%', 4, 10);
+  hCtx.fillStyle = sc.c[1];
+  hCtx.fillText('B:'+((1-last)*100).toFixed(1)+'%', 4, 21);
+}
+
+function renderBalls() {
+  const el = document.getElementById('balls-list');
+  if (!el) return;
+  el.innerHTML = balls.map(b=>`
+    <div class="ball-card">
+      <div class="ball-ico" style="background:${b.bc}; box-shadow:0 0 6px ${b.bc}55"></div>
+      <div class="ball-det">
+        <div class="bn">${b.name}</div>
+        <div class="bs">${b.bounces.toLocaleString()} bounces · ${b.mult}× spd</div>
+      </div>
+      ${balls.length>2?`<button class="ball-rm" onclick="removeBall(${b.id})" title="Remove">×</button>`:''}
+    </div>`).join('');
+}
+
+function renderHS() {
+  const el = document.getElementById('hiscores');
+  if (!el) return;
+  const hs = getHS();
+  if (!hs.length) { el.innerHTML='<div style="font-size:10px;color:var(--text-dim)">No records yet</div>'; return; }
+  el.innerHTML = hs.map((h,i)=>`
+    <div class="lb-item">
+      <span class="lb-rank">${i===0?'👑':'#'+(i+1)}</span>
+      <span class="lb-team">${h.team}</span>
+      <span class="lb-score">${h.score}%</span>
+      <span style="font-size:9px;color:var(--text-dim);margin-left:4px;">${h.date}</span>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════
+//  CONTROLS
+// ════════════════════════════════════════════════════
+function togglePause() {
+  running = !running;
+  if (running) { notify('▶ RESUMED'); requestAnimationFrame(loop); }
+  else          { notify('⏸ PAUSED'); }
+  updatePauseBtn();
+}
+
+function updatePauseBtn() {
+  const btn = document.getElementById('pause-btn');
+  const dot = document.getElementById('sdot');
+  const mob = document.getElementById('mob-pause');
+  if (running) {
+    btn.textContent = '⏸ PAUSE'; btn.className = 'btn pri';
+    dot.className = 'status-dot run';
+    mob && (mob.textContent = '⏸');
+  } else {
+    btn.textContent = '▶ RESUME'; btn.className = 'btn';
+    dot.className = 'status-dot pau';
+    mob && (mob.textContent = '▶');
+  }
+}
+
+function setSpeed(v) {
+  BASE_SPD = v;
+  document.getElementById('spd-sl').value = v;
+  document.getElementById('spd-v').textContent = v;
+  // Rescale ball velocities
+  balls.forEach(b=>{
+    const spd = Math.hypot(b.dx, b.dy);
+    if (spd > 0) { const t = BASE_SPD * b.mult; b.dx = b.dx/spd*t; b.dy = b.dy/spd*t; }
+  });
+  notify('SPEED: ' + v);
+  save();
+}
+
+function setPixel(v) {
+  SQ = v;
+  document.getElementById('px-sl').value = v;
+  document.getElementById('px-v').textContent = v;
+  initGame();
+  if (!running) { running = true; updatePauseBtn(); requestAnimationFrame(loop); }
+  notify('PIXEL: ' + v + 'px');
+  save();
+}
+
+function setChaos(v) {
+  CHAOS = v / 1000;
+  document.getElementById('chaos-sl').value = v;
+  document.getElementById('chaos-v').textContent = v + '%';
+  save();
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  document.getElementById('snd-btn').textContent = soundOn ? '🔊' : '🔇';
+  if (soundOn && !audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  save();
+  notify(soundOn ? '🔊 SOUND ON' : '🔇 SOUND OFF');
+}
+
+function toggleAddForm() {
+  document.getElementById('add-form').classList.toggle('open');
+}
+
+function addBall() {
+  const bc   = document.getElementById('nb-color').value;
+  const tc   = document.getElementById('nb-terr').value;
+  const mult = parseFloat(document.getElementById('nb-spd').value);
+  const ang  = Math.random() * Math.PI * 2;
+  const spd  = BASE_SPD * mult;
+  balls.push(mkBall({
+    x: canvas.width/2 + (Math.random()-.5)*canvas.width*0.4,
+    y: canvas.height/2 + (Math.random()-.5)*canvas.height*0.4,
+    dx: Math.cos(ang)*spd, dy: Math.sin(ang)*spd,
+    bc, tc,
+    name: 'BALL '+(ballIdCtr+1),
+    mult
+  }));
+  renderBalls();
+  notify('⚡ BALL DEPLOYED');
+}
+
+function removeBall(id) {
+  if (balls.length <= 2) { notify('MIN 2 BALLS'); return; }
+  balls = balls.filter(b=>b.id !== id);
+  renderBalls();
+  notify('BALL REMOVED');
+}
+
+function goFull() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(()=>notify('FULLSCREEN UNAVAILABLE'));
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  COLOR SCHEME
+// ════════════════════════════════════════════════════
+function buildSchemeGrid() {
+  const el = document.getElementById('sch-grid');
+  if (!el) return;
+  el.innerHTML = SCHEME_KEYS.map((k,i)=>{
+    const s = SCHEMES[k];
+    return `<button class="scheme-btn ${k===scheme?'on':''}" onclick="applyScheme('${k}')" data-key="${k}" title="${s.name} [${i+1}]">
+      <span>${s.e}</span>
+      <div class="sch-prev"><div style="background:${s.c[0]}"></div><div style="background:${s.c[1]}"></div></div>
+      <span>${s.name}</span>
+    </button>`;
+  }).join('');
+}
+
+function applyScheme(key) {
+  scheme = key;
+  applySchemeCSS(key);
+  buildSchemeGrid();
+  initGame();
+  if (!running) { running = true; updatePauseBtn(); requestAnimationFrame(loop); }
+  notify('SCHEME: ' + SCHEMES[key].name.toUpperCase());
+  save();
+}
+
+// ════════════════════════════════════════════════════
+//  SOUND
+// ════════════════════════════════════════════════════
+function beep(color, type) {
+  if (!soundOn || !audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    // Boundary vs square — slightly different
+    const base = 220 + (parseInt(color.slice(1,3),16) % 6) * 40;
+    osc.frequency.value = type === 0 ? base * 1.5 : base;
+    osc.type = type === 0 ? 'sine' : 'triangle';
+    const vol = type === 0 ? 0.06 : 0.04;
+    const dur = type === 0 ? 0.12 : 0.07;
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + dur);
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════
+//  EVENTS
+// ════════════════════════════════════════════════════
+function setupEvents() {
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    switch(e.code) {
+      case 'Space':      e.preventDefault(); togglePause(); break;
+      case 'KeyR':       resetGame(); break;
+      case 'KeyF':       goFull(); break;
+      case 'KeyM':       toggleSound(); break;
+      case 'Equal': case 'NumpadAdd':      setSpeed(Math.min(20, BASE_SPD+1)); break;
+      case 'Minus': case 'NumpadSubtract': setSpeed(Math.max(1,  BASE_SPD-1)); break;
+      case 'BracketLeft':  setPixel(Math.max(5,  SQ-5)); break;
+      case 'KeyP':         setPixel(Math.min(60, SQ+5)); break;
+      case 'Digit1': applyScheme('arctic');  break;
+      case 'Digit2': applyScheme('sunset');  break;
+      case 'Digit3': applyScheme('neon');    break;
+      case 'Digit4': applyScheme('forest');  break;
+      case 'Digit5': applyScheme('mono');    break;
+      case 'Digit6': applyScheme('lava');    break;
+    }
+  });
+
+  // Canvas click — burst of particles
+  canvas.addEventListener('click', e => {
+    const r = canvas.getBoundingClientRect();
+    const x = (e.clientX - r.left) * (canvas.width / r.width);
+    const y = (e.clientY - r.top)  * (canvas.height / r.height);
+    for (let i = 0; i < 25; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 1.5 + Math.random() * 4;
+      particles.push({
+        x, y,
+        vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd - 2,
+        color: SCHEMES[scheme].bc[0],
+        life: 1, decay: 0.02+Math.random()*0.03, size: 3+Math.random()*4
+      });
+    }
+  });
+
+  // Touch
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    const r = canvas.getBoundingClientRect();
+    const x = (t.clientX - r.left) * (canvas.width / r.width);
+    const y = (t.clientY - r.top)  * (canvas.height / r.height);
+    for (let i = 0; i < 20; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 1.2 + Math.random() * 3;
+      particles.push({
+        x, y,
+        vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd - 1.5,
+        color: SCHEMES[scheme].bc[1],
+        life: 1, decay: 0.025, size: 4
+      });
+    }
+  }, {passive:false});
+
+  // Resize
+  let resizeT;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(() => {
+      if (booted) {
+        initGame();
+        if (!running) { running = true; updatePauseBtn(); requestAnimationFrame(loop); }
       }
+    }, 280);
+  });
 
-      function updateColorStats() {
-        // Initialize all known colors
-        colors.forEach(colorObj => {
-          colorStats[colorObj.value] = 0;
-        });
-        
-        // Count squares for each color
-        for (let i = 0; i < numSquaresX; i++) {
-          for (let j = 0; j < numSquaresY; j++) {
-            const color = squares[i][j];
-            colorStats[color] = (colorStats[color] || 0) + 1;
-          }
-        }
-      }
+  // Fullscreen change
+  document.addEventListener('fullscreenchange', () => {
+    if (booted) {
+      setTimeout(()=>{
+        initGame();
+        if (!running){ running=true; updatePauseBtn(); requestAnimationFrame(loop); }
+      }, 150);
+    }
+  });
+}
 
-      function updatePercentageDisplay() {
-        const totalSquares = numSquaresX * numSquaresY;
-        let percentageHTML = '';
-        
-        colors.forEach(colorObj => {
-          const count = colorStats[colorObj.value] || 0;
-          const percentage = ((count / totalSquares) * 100).toFixed(1);
-          percentageHTML += `
-            <div class="percentage-item">
-              <div class="color-dot" style="background-color: ${colorObj.value}"></div>
-              <div>${colorObj.name}: ${percentage}%</div>
-            </div>
-          `;
-        });
-        
-        percentageElement.innerHTML = percentageHTML;
-      }
+// ════════════════════════════════════════════════════
+//  MOBILE DRAWER
+// ════════════════════════════════════════════════════
+function openDrawer(type) {
+  const sc = SCHEMES[scheme];
+  const overlay = document.getElementById('mob-drawer-overlay');
+  const drawer  = document.getElementById('mob-drawer');
+  const title   = document.getElementById('drawer-title');
+  const body    = document.getElementById('drawer-body');
 
-      function checkSquareCollision(ball) {
-        // Check multiple points around the ball's circumference
-        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
-          const checkX = ball.x + Math.cos(angle) * (SQUARE_SIZE / 2);
-          const checkY = ball.y + Math.sin(angle) * (SQUARE_SIZE / 2);
+  overlay.classList.add('open');
+  drawer.classList.add('open');
 
-          const i = Math.floor(checkX / SQUARE_SIZE);
-          const j = Math.floor(checkY / SQUARE_SIZE);
+  if (type === 'settings') {
+    title.textContent = 'CONTROLS';
+    body.innerHTML = `
+      <div class="frow"><label>SPEED</label><div class="sw"><input type="range" min="1" max="20" value="${BASE_SPD}" oninput="setSpeed(+this.value);this.nextElementSibling.textContent=this.value"><span class="sv">${BASE_SPD}</span></div></div>
+      <div class="frow"><label>PIXEL SIZE</label><div class="sw"><input type="range" min="5" max="60" value="${SQ}" step="5" oninput="setPixel(+this.value);this.nextElementSibling.textContent=this.value+'px'"><span class="sv">${SQ}px</span></div></div>
+      <div class="frow"><label>CHAOS</label><div class="sw"><input type="range" min="0" max="100" value="${Math.round(CHAOS*1000)}" oninput="setChaos(+this.value);this.nextElementSibling.textContent=this.value+'%'"><span class="sv">${Math.round(CHAOS*1000)}%</span></div></div>
+      <div class="trow" style="margin-top:12px;"><span>TRAILS</span><label class="tog"><input type="checkbox" ${showTrails?'checked':''} onchange="showTrails=this.checked;save()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+      <div class="trow"><span>PARTICLES</span><label class="tog"><input type="checkbox" ${showParts?'checked':''} onchange="showParts=this.checked;save()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+      <div class="trow"><span>GRID LINES</span><label class="tog"><input type="checkbox" ${showGrid?'checked':''} onchange="showGrid=this.checked;save()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+      <div class="trow"><span>GLOW</span><label class="tog"><input type="checkbox" ${showGlow?'checked':''} onchange="showGlow=this.checked;save()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+    `;
+  } else if (type === 'scheme') {
+    title.textContent = 'COLOR SCHEME';
+    body.innerHTML = `<div class="scheme-grid">${SCHEME_KEYS.map((k,i)=>{
+      const s=SCHEMES[k];
+      return `<button class="scheme-btn ${k===scheme?'on':''}" onclick="applyScheme('${k}');closeDrawer()">
+        <span>${s.e}</span>
+        <div class="sch-prev"><div style="background:${s.c[0]}"></div><div style="background:${s.c[1]}"></div></div>
+        <span>${s.name}</span>
+      </button>`;
+    }).join('')}</div>`;
+  } else if (type === 'add') {
+    title.textContent = 'ADD BALL';
+    body.innerHTML = `
+      <div class="frow"><label>BALL COLOR</label><input type="color" id="m-nb-color" value="#FFC801" style="width:100%;height:36px;"></div>
+      <div class="frow"><label>TERRITORY COLOR</label><input type="color" id="m-nb-terr" value="${sc.c[0]}" style="width:100%;height:36px;"></div>
+      <div class="frow"><label>SPEED MULT</label><div class="sw"><input type="range" min="0.5" max="2" step="0.1" value="1" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1)+'×'" id="m-nb-spd"><span class="sv" id="m-nb-spd-v">1.0×</span></div></div>
+      <button class="btn pri" style="width:100%;margin-top:10px;" onclick="
+        const bc=document.getElementById('m-nb-color').value;
+        const tc=document.getElementById('m-nb-terr').value;
+        const mult=parseFloat(document.getElementById('m-nb-spd').value);
+        const ang=Math.random()*Math.PI*2;const spd=BASE_SPD*mult;
+        balls.push(mkBall({x:canvas.width/2+(Math.random()-.5)*canvas.width*.4,y:canvas.height/2+(Math.random()-.5)*canvas.height*.4,dx:Math.cos(ang)*spd,dy:Math.sin(ang)*spd,bc,tc,name:'BALL '+(ballIdCtr+1),mult}));
+        renderBalls();notify('⚡ DEPLOYED');closeDrawer();
+      ">⚡ DEPLOY BALL</button>
+      <div style="margin-top:14px;font-family:'Orbitron',monospace;font-size:9px;color:var(--accent);letter-spacing:1px;margin-bottom:8px;">ACTIVE BALLS</div>
+      <div id="m-balls-list">${balls.map(b=>`<div class="ball-card">
+        <div class="ball-ico" style="background:${b.bc}"></div>
+        <div class="ball-det"><div class="bn">${b.name}</div><div class="bs">${b.bounces} bounces</div></div>
+        ${balls.length>2?`<button class="ball-rm" onclick="removeBall(${b.id});openDrawer('add')">×</button>`:''}
+      </div>`).join('')}</div>
+    `;
+  } else if (type === 'stats') {
+    title.textContent = 'STATS';
+    const {a,b,total} = getCounts();
+    const elapsed = Math.floor((Date.now()-startTime)/1000);
+    const totalB = balls.reduce((s,b)=>s+b.bounces,0);
+    const tot = getTotals();
+    body.innerHTML = `
+      <div class="stat-row"><span class="k">ALPHA</span><span class="v">${(a/total*100).toFixed(1)}%</span></div>
+      <div class="stat-row"><span class="k">OMEGA</span><span class="v">${(b/total*100).toFixed(1)}%</span></div>
+      <div class="stat-row"><span class="k">ELAPSED</span><span class="v">${fmtTime(elapsed)}</span></div>
+      <div class="stat-row"><span class="k">TICKS</span><span class="v">${iteration.toLocaleString()}</span></div>
+      <div class="stat-row"><span class="k">BOUNCES</span><span class="v">${totalB.toLocaleString()}</span></div>
+      <div class="stat-row"><span class="k">GRID</span><span class="v">${numX}×${numY}</span></div>
+      <div class="stat-row"><span class="k">FPS</span><span class="v">${fps}</span></div>
+      <div style="margin-top:12px;font-family:'Orbitron',monospace;font-size:9px;color:var(--accent);letter-spacing:1px;margin-bottom:8px;">RECORDS</div>
+      ${getHS().slice(0,5).map((h,i)=>`<div class="lb-item">
+        <span class="lb-rank">${i===0?'👑':'#'+(i+1)}</span>
+        <span class="lb-team">${h.team}</span>
+        <span class="lb-score">${h.score}%</span>
+      </div>`).join('')||'<div style="font-size:10px;color:var(--text-dim)">No records yet</div>'}
+    `;
+  }
+}
 
-          if (i >= 0 && i < numSquaresX && j >= 0 && j < numSquaresY) {
-            if (squares[i][j] !== ball.reverseColor) {
-              // Square hit! Update square color
-              squares[i][j] = ball.reverseColor;
+function closeDrawer() {
+  document.getElementById('mob-drawer-overlay').classList.remove('open');
+  document.getElementById('mob-drawer').classList.remove('open');
+}
 
-              // Determine bounce direction based on the angle
-              if (Math.abs(Math.cos(angle)) > Math.abs(Math.sin(angle))) {
-                ball.dx = -ball.dx;
-              } else {
-                ball.dy = -ball.dy;
-              }
-              
-              // Increment bounce counter
-              ball.bounces++;
-              updateBallsList();
-            }
-          }
-        }
-      }
+// ════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════
+function hexRgba(hex, a) {
+  if (!hex || hex.length < 7) return `rgba(128,128,128,${a})`;
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
 
-      function checkBoundaryCollision(ball) {
-        let bounced = false;
-        
-        if (ball.x + ball.dx > canvas.width - SQUARE_SIZE / 2 || ball.x + ball.dx < SQUARE_SIZE / 2) {
-          ball.dx = -ball.dx;
-          bounced = true;
-        }
-        if (ball.y + ball.dy > canvas.height - SQUARE_SIZE / 2 || ball.y + ball.dy < SQUARE_SIZE / 2) {
-          ball.dy = -ball.dy;
-          bounced = true;
-        }
-        
-        if (bounced) {
-          ball.bounces++;
-          updateBallsList();
-        }
-      }
+function fmtTime(s) {
+  const m = Math.floor(s/60), ss = s%60;
+  return (m?m+'m ':'')+ss+'s';
+}
 
-      function addRandomness(ball) {
-        ball.dx += Math.random() * 0.02 - 0.01;
-        ball.dy += Math.random() * 0.02 - 0.01;
-
-        // Limit the speed of the ball
-        ball.dx = Math.min(Math.max(ball.dx, -MAX_SPEED), MAX_SPEED);
-        ball.dy = Math.min(Math.max(ball.dy, -MAX_SPEED), MAX_SPEED);
-
-        // Make sure the ball always maintains a minimum speed
-        if (Math.abs(ball.dx) < MIN_SPEED) ball.dx = ball.dx > 0 ? MIN_SPEED : -MIN_SPEED;
-        if (Math.abs(ball.dy) < MIN_SPEED) ball.dy = ball.dy > 0 ? MIN_SPEED : -MIN_SPEED;
-      }
-
-      function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawSquares();
-
-        balls.forEach((ball) => {
-          drawBall(ball);
-          if (gameRunning && !placementMode) {
-            checkSquareCollision(ball);
-            checkBoundaryCollision(ball);
-            ball.x += ball.dx;
-            ball.y += ball.dy;
-            addRandomness(ball);
-          }
-        });
-
-        // Draw pending ball and region in placement mode
-        if (placementMode && pendingBall) {
-          drawBall(pendingBall);
-          
-          // Draw the new region preview
-          if (selectedRegionType === 'new' && pendingRegion) {
-            const centerX = pendingRegion.x;
-            const centerY = pendingRegion.y;
-            
-            ctx.fillStyle = pendingBall.reverseColor + '80'; // Semi-transparent
-            ctx.strokeStyle = pendingBall.reverseColor;
-            ctx.lineWidth = 2;
-            
-            const startX = Math.max(0, centerX - Math.floor(NEW_REGION_SIZE / 2)) * SQUARE_SIZE;
-            const startY = Math.max(0, centerY - Math.floor(NEW_REGION_SIZE / 2)) * SQUARE_SIZE;
-            const width = Math.min(NEW_REGION_SIZE, numSquaresX - Math.floor(startX / SQUARE_SIZE)) * SQUARE_SIZE;
-            const height = Math.min(NEW_REGION_SIZE, numSquaresY - Math.floor(startY / SQUARE_SIZE)) * SQUARE_SIZE;
-            
-            ctx.fillRect(startX, startY, width, height);
-            ctx.strokeRect(startX, startY, width, height);
-          }
-        }
-
-        if (gameRunning && !placementMode) {
-          iteration++;
-          iterationElement.textContent = `Iteration: ${iteration}`;
-        }
-      }
-
-      function createNewRegion(centerX, centerY, color) {
-        const centerGridX = centerX;
-        const centerGridY = centerY;
-        
-        const startX = Math.max(0, centerGridX - Math.floor(NEW_REGION_SIZE / 2));
-        const startY = Math.max(0, centerGridY - Math.floor(NEW_REGION_SIZE / 2));
-        const endX = Math.min(numSquaresX, startX + NEW_REGION_SIZE);
-        const endY = Math.min(numSquaresY, startY + NEW_REGION_SIZE);
-        
-        // Create the new region
-        for (let i = startX; i < endX; i++) {
-          for (let j = startY; j < endY; j++) {
-            squares[i][j] = color;
-          }
-        }
-        
-        // Update color stats
-        updateColorStats();
-        updatePercentageDisplay();
-      }
-
-      function startPlacementMode(ballConfig) {
-        placementMode = true;
-        gameRunning = false;
-        controlBtn.style.display = "none";
-        resumeBtn.style.display = "block";
-        placementOverlay.style.display = "flex";
-        
-        pendingBall = {
-          ...ballConfig,
-          x: canvas.width / 2,
-          y: canvas.height / 2
-        };
-        
-        // For new regions, create a separate region object
-        if (selectedRegionType === 'new') {
-          pendingRegion = {
-            x: Math.floor(pendingBall.x / SQUARE_SIZE),
-            y: Math.floor(pendingBall.y / SQUARE_SIZE)
-          };
-        }
-        
-        // Set up mouse and touch event handlers for dragging
-        setupDragHandlers();
-      }
-
-      function setupDragHandlers() {
-        // Mouse events
-        canvas.addEventListener('mousedown', handleMouseDown);
-        canvas.addEventListener('mousemove', handleMouseMove);
-        canvas.addEventListener('mouseup', handleMouseUp);
-        canvas.addEventListener('mouseleave', handleMouseUp);
-        
-        // Touch events for mobile
-        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-        canvas.addEventListener('touchend', handleTouchEnd);
-        canvas.addEventListener('touchcancel', handleTouchEnd);
-      }
-
-      function removeDragHandlers() {
-        // Remove mouse events
-        canvas.removeEventListener('mousedown', handleMouseDown);
-        canvas.removeEventListener('mousemove', handleMouseMove);
-        canvas.removeEventListener('mouseup', handleMouseUp);
-        canvas.removeEventListener('mouseleave', handleMouseUp);
-        
-        // Remove touch events
-        canvas.removeEventListener('touchstart', handleTouchStart);
-        canvas.removeEventListener('touchmove', handleTouchMove);
-        canvas.removeEventListener('touchend', handleTouchEnd);
-        canvas.removeEventListener('touchcancel', handleTouchEnd);
-      }
-
-      function handleMouseDown(event) {
-        if (!placementMode || !pendingBall) return;
-        
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        handleDragStart(x, y);
-      }
-
-      function handleMouseMove(event) {
-        if (!placementMode || !pendingBall) return;
-        
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        handleDragMove(x, y);
-      }
-
-      function handleMouseUp() {
-        handleDragEnd();
-      }
-
-      function handleTouchStart(event) {
-        if (!placementMode || !pendingBall) return;
-        
-        event.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const touch = event.touches[0];
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-        
-        handleDragStart(x, y);
-      }
-
-      function handleTouchMove(event) {
-        if (!placementMode || !pendingBall) return;
-        
-        event.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const touch = event.touches[0];
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-        
-        handleDragMove(x, y);
-      }
-
-      function handleTouchEnd() {
-        handleDragEnd();
-      }
-
-      function handleDragStart(x, y) {
-        // Check if touch is on the ball
-        const ballDistance = Math.sqrt((x - pendingBall.x) ** 2 + (y - pendingBall.y) ** 2);
-        if (ballDistance <= SQUARE_SIZE / 2) {
-          isDraggingBall = true;
-          dragOffsetX = x - pendingBall.x;
-          dragOffsetY = y - pendingBall.y;
-          canvas.classList.add('dragging');
-          return;
-        }
-        
-        // Check if touch is on the region (for new regions)
-        if (selectedRegionType === 'new' && pendingRegion) {
-          const regionCenterX = (pendingRegion.x + 0.5) * SQUARE_SIZE;
-          const regionCenterY = (pendingRegion.y + 0.5) * SQUARE_SIZE;
-          const regionSize = NEW_REGION_SIZE * SQUARE_SIZE;
-          
-          if (x >= regionCenterX - regionSize/2 && x <= regionCenterX + regionSize/2 &&
-              y >= regionCenterY - regionSize/2 && y <= regionCenterY + regionSize/2) {
-            isDraggingRegion = true;
-            dragOffsetX = x - regionCenterX;
-            dragOffsetY = y - regionCenterY;
-            canvas.classList.add('region-dragging');
-          }
-        }
-      }
-
-      function handleDragMove(x, y) {
-        // Update ball position
-        if (isDraggingBall) {
-          pendingBall.x = x - dragOffsetX;
-          pendingBall.y = y - dragOffsetY;
-          
-          // Constrain to canvas boundaries
-          pendingBall.x = Math.max(SQUARE_SIZE / 2, Math.min(canvas.width - SQUARE_SIZE / 2, pendingBall.x));
-          pendingBall.y = Math.max(SQUARE_SIZE / 2, Math.min(canvas.height - SQUARE_SIZE / 2, pendingBall.y));
-        }
-        
-        // Update region position
-        if (isDraggingRegion && pendingRegion) {
-          const regionCenterX = x - dragOffsetX;
-          const regionCenterY = y - dragOffsetY;
-          
-          // Convert to grid coordinates
-          const gridX = Math.floor(regionCenterX / SQUARE_SIZE);
-          const gridY = Math.floor(regionCenterY / SQUARE_SIZE);
-          
-          // Constrain to canvas boundaries
-          pendingRegion.x = Math.max(Math.floor(NEW_REGION_SIZE / 2), 
-            Math.min(numSquaresX - Math.ceil(NEW_REGION_SIZE / 2), gridX));
-          pendingRegion.y = Math.max(Math.floor(NEW_REGION_SIZE / 2), 
-            Math.min(numSquaresY - Math.ceil(NEW_REGION_SIZE / 2), gridY));
-        }
-      }
-
-      function handleDragEnd() {
-        isDraggingBall = false;
-        isDraggingRegion = false;
-        canvas.classList.remove('dragging');
-        canvas.classList.remove('region-dragging');
-      }
-
-      function exitPlacementMode() {
-        placementMode = false;
-        
-        // If we have a pending ball, add it to the game
-        if (pendingBall) {
-          // If creating a new region, create it
-          if (selectedRegionType === 'new' && pendingRegion) {
-            createNewRegion(pendingRegion.x, pendingRegion.y, pendingBall.reverseColor);
-          }
-          
-          balls.push(pendingBall);
-          updateBallsList();
-          pendingBall = null;
-          pendingRegion = null;
-        }
-        
-        // Clean up event handlers
-        removeDragHandlers();
-        
-        // Update UI
-        placementOverlay.style.display = "none";
-        controlBtn.style.display = "block";
-        resumeBtn.style.display = "none";
-      }
-
-      function resumeGame() {
-        exitPlacementMode();
-        gameRunning = true;
-        controlBtn.textContent = "Pause";
-        controlBtn.classList.remove("paused");
-      }
-
-      function toggleGameState() {
-        if (placementMode) return;
-        
-        gameRunning = !gameRunning;
-        
-        if (gameRunning) {
-          controlBtn.textContent = "Pause";
-          controlBtn.classList.remove("paused");
-        } else {
-          controlBtn.textContent = "Play";
-          controlBtn.classList.add("paused");
-        }
-      }
-
-      // UI Functions
-      function updateBallsList() {
-        ballsListElement.innerHTML = '';
-        
-        balls.forEach(ball => {
-          const ballItem = document.createElement('div');
-          ballItem.className = 'ball-item';
-          
-          ballItem.innerHTML = `
-            <div class="ball-preview" style="background-color: ${ball.ballColor}"></div>
-            <div class="ball-info">
-              <div>Ball ${ball.id}</div>
-              <div class="ball-bounces">Bounces: ${ball.bounces}</div>
-            </div>
-            <button class="remove" data-ball-id="${ball.id}">Remove</button>
-          `;
-          
-          ballsListElement.appendChild(ballItem);
-        });
-        
-        // Add event listeners to remove buttons
-        ballsListElement.querySelectorAll('button.remove').forEach(button => {
-          button.addEventListener('click', function() {
-            const ballId = parseInt(this.getAttribute('data-ball-id'));
-            removeBall(ballId);
-          });
-        });
-      }
-      
-      function updateColorsList() {
-        colorsListElement.innerHTML = '';
-        
-        colors.forEach((color, index) => {
-          const colorItem = document.createElement('div');
-          colorItem.className = 'color-item';
-          
-          colorItem.innerHTML = `
-            <div class="color-preview" style="background-color: ${color.value}"></div>
-            <div class="color-name">${color.name}</div>
-            <input type="color" value="${color.value}" data-color-index="${index}">
-            <button class="remove" data-color-index="${index}">Remove</button>
-          `;
-          
-          colorsListElement.appendChild(colorItem);
-        });
-        
-        // Update the region color dropdown
-        updateRegionColorDropdown();
-        
-        // Add event listeners to color inputs and remove buttons
-        colorsListElement.querySelectorAll('input[type="color"]').forEach(input => {
-          input.addEventListener('change', function() {
-            const index = parseInt(this.getAttribute('data-color-index'));
-            updateColor(index, this.value);
-          });
-        });
-        
-        colorsListElement.querySelectorAll('button.remove').forEach(button => {
-          button.addEventListener('click', function() {
-            const index = parseInt(this.getAttribute('data-color-index'));
-            removeColor(index);
-          });
-        });
-      }
-      
-      function updateRegionColorDropdown() {
-        // Clear existing options
-        regionColorSelect.innerHTML = '';
-        
-        // Add all available colors to the dropdown
-        colors.forEach(color => {
-          const option = document.createElement('option');
-          option.value = color.value;
-          option.textContent = color.name;
-          regionColorSelect.appendChild(option);
-        });
-      }
-      
-      // Ball Management
-      function addBall() {
-        const ballColor = newBallColorInput.value;
-        const autoPlacement = autoPlacementCheckbox.checked;
-        
-        // Determine reverse color based on selection
-        let reverseColor;
-        if (selectedRegionType === 'existing') {
-          reverseColor = regionColorSelect.value;
-        } else {
-          reverseColor = newRegionColorInput.value; // Use the selected region color
-        }
-        
-        const newBall = {
-          id: balls.length > 0 ? Math.max(...balls.map(b => b.id)) + 1 : 1,
-          dx: (Math.random() - 0.5) * 10,
-          dy: (Math.random() - 0.5) * 10,
-          reverseColor: reverseColor,
-          ballColor: ballColor,
-          bounces: 0
-        };
-        
-        // Ensure minimum speed
-        if (Math.abs(newBall.dx) < MIN_SPEED) newBall.dx = newBall.dx > 0 ? MIN_SPEED : -MIN_SPEED;
-        if (Math.abs(newBall.dy) < MIN_SPEED) newBall.dy = newBall.dy > 0 ? MIN_SPEED : -MIN_SPEED;
-        
-        if (autoPlacement) {
-          // Auto-place the ball
-          if (selectedRegionType === 'existing') {
-            // Place in the selected region
-            if (selectedExistingRegion === 'day') {
-              newBall.x = Math.random() * (canvas.width / 2 - SQUARE_SIZE) + SQUARE_SIZE / 2;
-            } else {
-              newBall.x = Math.random() * (canvas.width / 2 - SQUARE_SIZE) + canvas.width / 2 + SQUARE_SIZE / 2;
-            }
-            newBall.y = Math.random() * (canvas.height - SQUARE_SIZE) + SQUARE_SIZE / 2;
-          } else {
-            // Place randomly for new region
-            newBall.x = Math.random() * (canvas.width - SQUARE_SIZE) + SQUARE_SIZE / 2;
-            newBall.y = Math.random() * (canvas.height - SQUARE_SIZE) + SQUARE_SIZE / 2;
-            // Create the new region
-            const centerX = Math.floor(newBall.x / SQUARE_SIZE);
-            const centerY = Math.floor(newBall.y / SQUARE_SIZE);
-            createNewRegion(centerX, centerY, reverseColor);
-          }
-          
-          balls.push(newBall);
-          updateBallsList();
-        } else {
-          // Enter placement mode
-          startPlacementMode(newBall);
-        }
-      }
-      
-      function removeBall(id) {
-        const index = balls.findIndex(ball => ball.id === id);
-        if (index !== -1) {
-          balls.splice(index, 1);
-          updateBallsList();
-        }
-      }
-      
-      // Color Management
-      function addColor() {
-        const newColor = {
-          name: `Color ${colors.length + 1}`,
-          value: '#' + Math.floor(Math.random()*16777215).toString(16)
-        };
-        
-        colors.push(newColor);
-        updateColorsList();
-        updateColorStats();
-        updatePercentageDisplay();
-      }
-      
-      function updateColor(index, newValue) {
-        if (index >= 0 && index < colors.length) {
-          const oldValue = colors[index].value;
-          colors[index].value = newValue;
-          
-          // Update color stats
-          colorStats[newValue] = colorStats[oldValue] || 0;
-          delete colorStats[oldValue];
-          
-          // Update balls that use this color
-          balls.forEach(ball => {
-            if (ball.ballColor === oldValue) {
-              ball.ballColor = newValue;
-            }
-            if (ball.reverseColor === oldValue) {
-              ball.reverseColor = newValue;
-            }
-          });
-          
-          // Update squares that use this color
-          for (let i = 0; i < numSquaresX; i++) {
-            for (let j = 0; j < numSquaresY; j++) {
-              if (squares[i][j] === oldValue) {
-                squares[i][j] = newValue;
-              }
-            }
-          }
-          
-          updateBallsList();
-          updatePercentageDisplay();
-        }
-      }
-      
-      function removeColor(index) {
-        if (index >= 0 && index < colors.length && colors.length > 2) {
-          // Check if color is being used
-          const colorValue = colors[index].value;
-          let isUsed = false;
-          
-          // Check balls
-          for (const ball of balls) {
-            if (ball.ballColor === colorValue || ball.reverseColor === colorValue) {
-              isUsed = true;
-              break;
-            }
-          }
-          
-          // Check squares
-          if (!isUsed) {
-            for (let i = 0; i < numSquaresX && !isUsed; i++) {
-              for (let j = 0; j < numSquaresY && !isUsed; j++) {
-                if (squares[i][j] === colorValue) {
-                  isUsed = true;
-                  break;
-                }
-              }
-            }
-          }
-          
-          if (isUsed) {
-            alert("Cannot remove color that is currently in use!");
-            return;
-          }
-          
-          colors.splice(index, 1);
-          delete colorStats[colorValue];
-          updateColorsList();
-          updatePercentageDisplay();
-        } else {
-          alert("You need at least 2 colors!");
-        }
-      }
-      
-      // Event Listeners
-      addBallBtn.addEventListener('click', addBall);
-      addColorBtn.addEventListener('click', addColor);
-      controlBtn.addEventListener('click', toggleGameState);
-      resumeBtn.addEventListener('click', resumeGame);
-      
-      // Initialize and start the game
-      init();
-      const FRAME_RATE = 100;
-      setInterval(draw, 1000 / FRAME_RATE);
-    </script>
-  </body>
-</html>
+let notifT;
+function notify(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(notifT);
+  notifT = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+</script>
+</body>
+  </html>
